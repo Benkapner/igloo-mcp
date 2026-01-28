@@ -1,4 +1,4 @@
-# Igloo MCP Server
+# Igloo MCP Server testing connection with github
 
 An MCP (Model Context Protocol) server that provides AI assistants with search capabilities for [Igloo](https://www.igloosoftware.com/) digital workplace instances.
 
