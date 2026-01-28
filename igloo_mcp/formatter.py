@@ -266,3 +266,61 @@ def format_truncation_metadata(metadata: "TruncationMetadata", url: str) -> str:
         ])
     
     return "\n".join(lines)
+
+
+def format_people_search_results(
+    results: list[dict[str, Any]],
+    query: str,
+    include_profile: bool = False,
+) -> str:
+    """
+    Format people search results for LLM consumption.
+    
+    Args:
+        results: List of person records with profile data
+        query: The original search query
+        include_profile: Whether detailed profile was fetched
+    """
+    if not results:
+        return f"No people found matching '{query}'"
+    
+    output = []
+    output.append(f"People Search Results for '{query}' ({len(results)} found):")
+    output.append("-" * 50)
+    
+    for person in results:
+        lines = [
+            f"Name: {person.get('full_name', 'Unknown')}",
+            f"Email: {person.get('email', 'N/A')}",
+            f"Username: {person.get('username', 'N/A')}",
+            f"Profile URL: {person.get('profile_url', 'N/A')}",
+        ]
+        
+        # Add profile details if available
+        profile = person.get("profile", {})
+        if profile:
+            if profile.get("job_title"):
+                lines.append(f"Job Title: {profile['job_title']}")
+            if profile.get("department"):
+                lines.append(f"Department: {profile['department']}")
+            if profile.get("manager_name"):
+                lines.append(f"Manager: {profile['manager_name']}")
+            if profile.get("manager_email"):
+                lines.append(f"Manager Email: {profile['manager_email']}")
+            if profile.get("office"):
+                lines.append(f"Office: {profile['office']}")
+            if profile.get("desk"):
+                lines.append(f"Desk: {profile['desk']}")
+            if profile.get("work_phone"):
+                lines.append(f"Work Phone: {profile['work_phone']}")
+            if profile.get("extension"):
+                lines.append(f"Extension: {profile['extension']}")
+            if profile.get("mobile"):
+                lines.append(f"Mobile: {profile['mobile']}")
+            if profile.get("start_date"):
+                lines.append(f"Start Date: {profile['start_date']}")
+        
+        output.append("\n".join(lines))
+        output.append("-" * 50)
+    
+    return "\n".join(output)

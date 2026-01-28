@@ -21,6 +21,7 @@ from igloo_mcp.formatter import (
     format_fetch_result,
     format_fetch_results,
     format_truncation_metadata,
+    format_people_search_results,
 )
 from igloo_mcp.igloo import ApplicationType, IglooClient, UpdatedDateType
 from igloo_mcp.logger import logger, configure_logger
@@ -450,6 +451,59 @@ async def fetch_tool(
     return format_fetch_results(
         results=formatted_results,
         total_count=len(urls),
+    )
+
+
+@mcp.tool(name="people_search")
+async def people_search_tool(
+    ctx: Context[ServerSession, AppContext],
+    query: str,
+    include_profile: bool = True,
+    limit: int = 5,
+) -> str:
+    """
+    Search for people/members in the Igloo community by name.
+    
+    Use this tool when users ask about:
+    - Who someone is ("Who is John Smith?")
+    - Contact information ("How can I contact Jane?")
+    - Finding people by name ("Find John Smith")
+    - Manager/reporting structure ("Who does X report to?")
+    
+    Args:
+        query: Name or partial name to search for (e.g., "John Smith", "Jane")
+        include_profile: If True, fetches detailed profile info (title, manager, phone, office).
+                        Set to False for faster results with just basic info.
+        limit: Maximum number of people to return (default: 5)
+    
+    Returns:
+        Formatted list of matching people with their contact and profile information.
+    """
+    logger.info(f"Processing people_search request for query: {query}")
+    
+    client = ctx.request_context.lifespan_context.igloo_client
+    
+    # Search for members
+    results = await client.search_members(query=query, limit=limit)
+    
+    if not results:
+        return f"No people found matching '{query}'"
+    
+    # Fetch detailed profile for each person if requested
+    if include_profile:
+        for person in results:
+            if person.get("user_id"):
+                try:
+                    profile = await client.get_user_profile(person["user_id"])
+                    person["profile"] = profile
+                except Exception as exc:
+                    logger.warning(f"Failed to fetch profile for {person.get('full_name')}: {exc}")
+                    person["profile"] = {}
+    
+    return format_people_search_results(
+        results=results,
+        query=query,
+        include_profile=include_profile,
     )
 
 
