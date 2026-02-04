@@ -968,7 +968,7 @@ class TestFormatTruncationMetadata:
         
         result = format_truncation_metadata(metadata, url)
         
-        assert "CONTENT TRUNCATED" in result
+        assert "⚠️ CONTENT TRUNCATED" in result
         assert "Showing 1,000 of 5,000 chars (20% of document)" in result
         assert "To continue reading, call fetch with start_index:" in result
         assert 'fetch(url="https://example.com/wiki/page", start_index=1000)' in result
