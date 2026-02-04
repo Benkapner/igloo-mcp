@@ -1018,7 +1018,7 @@ class TestFormatTruncationMetadata:
         result = format_truncation_metadata(metadata, url)
         
         assert "---" in result
-        assert "CONTENT TRUNCATED" in result
+        assert "⚠️ CONTENT TRUNCATED" in result
         assert "Showing 49,800 of 125,000 chars (39% of document)" in result
         assert "Current section: Docs > API > Authentication" in result
         assert "Upcoming sections: Rate Limits, Error Codes, Webhooks, Examples, FAQ" in result
