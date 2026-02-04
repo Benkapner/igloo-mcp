@@ -714,7 +714,7 @@ class TestTruncateText:
 
     def test_unicode_emoji_characters(self):
         """Test text with unicode/emoji characters."""
-        text = "Hello World! " * 30
+        text = "Hello 👋 World " * 30
         truncated = _truncate_text(text, max_length=200)
         assert len(truncated) <= 203
         if len(text) > 200:
