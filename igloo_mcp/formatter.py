@@ -247,7 +247,7 @@ def format_truncation_metadata(metadata: "TruncationMetadata", url: str) -> str:
         "",
         "---",
         "",
-        "CONTENT TRUNCATED",
+        "⚠️ CONTENT TRUNCATED",
         f"Showing {metadata.chars_returned:,} of {metadata.chars_total:,} chars ({pct}% of document)",
     ]
     
