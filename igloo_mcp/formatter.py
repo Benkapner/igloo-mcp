@@ -247,7 +247,7 @@ def format_truncation_metadata(metadata: "TruncationMetadata", url: str) -> str:
         "",
         "---",
         "",
-        "⚠️ CONTENT TRUNCATED",
+        "CONTENT TRUNCATED",
         f"Showing {metadata.chars_returned:,} of {metadata.chars_total:,} chars ({pct}% of document)",
     ]
     
@@ -271,56 +271,95 @@ def format_truncation_metadata(metadata: "TruncationMetadata", url: str) -> str:
 def format_user_search_results(
     results: list[dict[str, Any]],
     query: str,
-    include_profile: bool = False,
+    community_url: str = "",
 ) -> str:
     """
     Format user search results for LLM consumption.
     
     Args:
-        results: List of user records with profile data
+        results: List of raw user records from the API
         query: The original search query
-        include_profile: Whether detailed profile was fetched
-    """
-    if not results:
-        return f"No users found matching '{query}'"
+        community_url: The base URL of the Igloo community (for building profile URLs)
     
-    output = []
-    output.append(f"User Search Results for '{query}' ({len(results)} found):")
-    output.append("-" * 50)
+    Returns:
+        A formatted string containing the user search results with header and individual result sections.
+    """
+    header = f'Users found for query: "{query}" (Total Results Found: {len(results)}):'
+    
+    if not results:
+        return f"{header}\n\nNo results found."
+    
+    formatted_results = [header]
     
     for user in results:
-        lines = [
-            f"Name: {user.get('full_name', 'Unknown')}",
-            f"Email: {user.get('email', 'N/A')}",
-            f"Username: {user.get('username', 'N/A')}",
-            f"Profile URL: {user.get('profile_url', 'N/A')}",
-        ]
-        
-        # Add profile details if available
-        profile = user.get("profile", {})
-        if profile:
-            if profile.get("job_title"):
-                lines.append(f"Job Title: {profile['job_title']}")
-            if profile.get("department"):
-                lines.append(f"Department: {profile['department']}")
-            if profile.get("manager_name"):
-                lines.append(f"Manager: {profile['manager_name']}")
-            if profile.get("manager_email"):
-                lines.append(f"Manager Email: {profile['manager_email']}")
-            if profile.get("office"):
-                lines.append(f"Office: {profile['office']}")
-            if profile.get("desk"):
-                lines.append(f"Desk: {profile['desk']}")
-            if profile.get("work_phone"):
-                lines.append(f"Work Phone: {profile['work_phone']}")
-            if profile.get("extension"):
-                lines.append(f"Extension: {profile['extension']}")
-            if profile.get("mobile"):
-                lines.append(f"Mobile: {profile['mobile']}")
-            if profile.get("start_date"):
-                lines.append(f"Start Date: {profile['start_date']}")
-        
-        output.append("\n".join(lines))
-        output.append("-" * 50)
+        formatted_results.append("\n----------\n")
+        formatted_results.append(_format_single_user_result(user, community_url))
     
-    return "\n".join(output)
+    formatted_results.append("\n----------")
+    
+    return "".join(formatted_results)
+
+
+# Map raw API profile field names to display labels (whitelist approach)
+# Only fields in this mapping will be included in the output
+PROFILE_FIELD_MAPPING = {
+    "title": "Job Title",
+    "department": "Department",
+    "i_report_to_email": "Manager Email",
+    "office_location": "Office",
+    "desk_number": "Desk",
+    "busphone": "Work Phone",
+    "extension": "Extension",
+    "cellphone": "Mobile",
+    "work_start_date": "Start Date",
+}
+
+
+def _format_single_user_result(user: dict[str, Any], community_url: str = "") -> str:
+    """
+    Format a single user search result from raw API data.
+    
+    Args:
+        user: Raw user record from the API with fields like id, name, email, namespace, profile_items
+        community_url: Base URL for building profile links
+    """
+    # Extract basic info from raw API structure
+    name_info = user.get("name", {})
+    full_name = name_info.get("fullName", "Unknown")
+    email = user.get("email", "N/A")
+    username = user.get("namespace", "N/A")
+    profile_url = f"{community_url}/.profile/{username}" if community_url and username else "N/A"
+    
+    lines = [
+        f"Name: {full_name}",
+        f"Email: {email}",
+        f"Username: {username}",
+        f"Profile URL: {profile_url}",
+    ]
+    
+    # Add manager name if available (fetched separately in main.py)
+    if manager_name := user.get("manager_name"):
+        lines.append(f"Manager Name: {manager_name}")
+    
+    # Process raw profile items
+    profile_items = user.get("profile_items", [])
+    for item in profile_items:
+        field_name = item.get("Name", "")
+        field_value = item.get("Value", "")
+        
+        # Skip empty or null values
+        if not field_value or field_value in ("null", "https://bluejeans.com/null"):
+            continue
+        
+        # Get display label (use mapping or convert field name)
+        label = PROFILE_FIELD_MAPPING.get(field_name)
+        if not label:
+            continue  # Only show fields we have mappings for
+        
+        # Clean up date format
+        if "date" in field_name and " " in str(field_value):
+            field_value = str(field_value).split(" ")[0]
+        
+        lines.append(f"{label}: {field_value}")
+    
+    return "\n".join(lines)

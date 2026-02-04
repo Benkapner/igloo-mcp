@@ -319,7 +319,9 @@ class IglooClient:
             limit: Maximum number of results to return
             
         Returns:
-            List of user records with basic info (name, email, username, user_id)
+            List of raw user records from the API (limited to `limit` results).
+            Each record contains fields like: id, name (with fullName, firstName, lastName),
+            email, namespace, etc.
         """
         endpoint = "/.api/api.svc/search/members"
         response = await self._request(
@@ -331,22 +333,9 @@ class IglooClient:
         response_json = response.json()
         hits = response_json.get("response", {}).get("value", {}).get("hit", [])
         
-        results = []
-        for hit in hits[:limit]:
-            name_info = hit.get("name", {})
-            results.append({
-                "user_id": hit.get("id", ""),
-                "full_name": name_info.get("fullName", "Unknown"),
-                "first_name": name_info.get("firstName", ""),
-                "last_name": name_info.get("lastName", ""),
-                "email": hit.get("email", ""),
-                "username": hit.get("namespace", ""),
-                "profile_url": f"{self.community}/.profile/{hit.get('namespace', '')}",
-            })
-        
-        return results
+        return hits[:limit]
 
-    async def get_user_profile(self, user_id: str) -> dict[str, Any]:
+    async def get_user_profile(self, user_id: str) -> list[dict[str, Any]]:
         """
         Get detailed profile information for a user.
         
@@ -354,7 +343,7 @@ class IglooClient:
             user_id: The user's ID (from search_users results)
             
         Returns:
-            Dict with profile fields (title, manager, office, phone, etc.)
+            List of raw profile items from the API. Each item has "Name" and "Value" keys.
         """
         endpoint = f"/.api/api.svc/users/{user_id}/viewprofile"
         response = await self._request(
@@ -363,71 +352,22 @@ class IglooClient:
         )
         
         response_json = response.json()
-        items = response_json.get("response", {}).get("items", [])
-        
-        # Map API field names to clean names
-        field_mapping = {
-            "title": "job_title",
-            "department": "department",
-            "i_report_to_email": "manager_email",
-            "office_location": "office",
-            "desk_number": "desk",
-            "busphone": "work_phone",
-            "extension": "extension",
-            "cellphone": "mobile",
-            "work_start_date": "start_date",
-        }
-        
-        # Skip these fields from output
-        skip_fields = {"bluejeans", "timezone"}
-        
-        profile: dict[str, Any] = {}
-        manager_id = None
-        
-        for item in items:
-            field_name = item.get("Name", "")
-            field_value = item.get("Value", "")
-            
-            # Capture manager ID for later lookup
-            if field_name == "i_report_to" and field_value:
-                manager_id = field_value
-                continue
-            
-            if field_name in skip_fields:
-                continue
-            
-            if field_value and field_value not in ["null", "https://bluejeans.com/null"]:
-                # Use mapped name if available, otherwise use original
-                clean_name = field_mapping.get(field_name, field_name)
-                
-                # Clean up date format
-                if "date" in field_name and " " in str(field_value):
-                    field_value = str(field_value).split(" ")[0]
-                
-                profile[clean_name] = field_value
-        
-        # Fetch manager's name if we have their ID
-        if manager_id:
-            try:
-                manager_name = await self._get_user_name(manager_id)
-                if manager_name:
-                    profile["manager_name"] = manager_name
-            except Exception:
-                pass  # Keep just the email if we can't get the name
-        
-        return profile
+        return response_json.get("response", {}).get("items", [])
 
-    async def _get_user_name(self, user_id: str) -> str | None:
-        """Get a user's full name by their ID."""
+    async def get_user_name(self, user_id: str) -> dict[str, Any]:
+        """
+        Get a user's basic info by their ID.
+        
+        Args:
+            user_id: The user's ID
+            
+        Returns:
+            Raw user response from the API containing name info.
+        """
         endpoint = f"/.api/api.svc/users/{user_id}/view"
-        try:
-            response = await self._request(
-                method="GET",
-                endpoint=endpoint,
-            )
-            response_json = response.json()
-            persona = response_json.get("response", {})
-            name_info = persona.get("name", {})
-            return name_info.get("fullName")
-        except Exception:
-            return None
+        response = await self._request(
+            method="GET",
+            endpoint=endpoint,
+        )
+        response_json = response.json()
+        return response_json.get("response", {})

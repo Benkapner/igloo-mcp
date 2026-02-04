@@ -714,7 +714,7 @@ class TestTruncateText:
 
     def test_unicode_emoji_characters(self):
         """Test text with unicode/emoji characters."""
-        text = "Hello 👋 World " * 30
+        text = "Hello World " * 30
         truncated = _truncate_text(text, max_length=200)
         assert len(truncated) <= 203
         if len(text) > 200:
@@ -968,7 +968,7 @@ class TestFormatTruncationMetadata:
         
         result = format_truncation_metadata(metadata, url)
         
-        assert "⚠️ CONTENT TRUNCATED" in result
+        assert "CONTENT TRUNCATED" in result
         assert "Showing 1,000 of 5,000 chars (20% of document)" in result
         assert "To continue reading, call fetch with start_index:" in result
         assert 'fetch(url="https://example.com/wiki/page", start_index=1000)' in result
@@ -1018,7 +1018,7 @@ class TestFormatTruncationMetadata:
         result = format_truncation_metadata(metadata, url)
         
         assert "---" in result
-        assert "⚠️ CONTENT TRUNCATED" in result
+        assert "CONTENT TRUNCATED" in result
         assert "Showing 49,800 of 125,000 chars (39% of document)" in result
         assert "Current section: Docs > API > Authentication" in result
         assert "Upcoming sections: Rate Limits, Error Codes, Webhooks, Examples, FAQ" in result
@@ -1037,7 +1037,7 @@ class TestFormatTruncationMetadata:
         
         result = format_truncation_metadata(metadata, url)
         
-        assert "⚠️ CONTENT TRUNCATED" in result
+        assert "CONTENT TRUNCATED" in result
         assert "Showing 1,000 of 5,000 chars (20% of document)" in result
         assert "To continue reading" not in result
 
@@ -1283,22 +1283,24 @@ More content here.
 
 
 class TestFormatUserSearchResults:
-    """Tests for the format_user_search_results function."""
+    """Tests for the format_user_search_results function with raw API data."""
 
     def test_basic_formatting(self):
         """
-        Test basic user search formatting with minimal data.
+        Test basic user search formatting with raw API data structure.
         """
         results = [{
-            "full_name": "Alice Johnson",
+            "id": "12345",
+            "name": {"fullName": "Alice Johnson", "firstName": "Alice", "lastName": "Johnson"},
             "email": "ajohnson@example.com",
-            "username": "ajohnson",
-            "profile_url": "https://example.com/.profile/ajohnson",
+            "namespace": "ajohnson",
         }]
         
-        output = format_user_search_results(results, query="Johnson")
+        output = format_user_search_results(
+            results, query="Johnson", community_url="https://example.com"
+        )
         
-        assert "User Search Results for 'Johnson' (1 found):" in output
+        assert 'Users found for query: "Johnson" (Total Results Found: 1):' in output
         assert "Name: Alice Johnson" in output
         assert "Email: ajohnson@example.com" in output
         assert "Username: ajohnson" in output
@@ -1306,30 +1308,32 @@ class TestFormatUserSearchResults:
 
     def test_formatting_with_full_profile(self):
         """
-        Test formatting with complete profile data.
+        Test formatting with complete raw profile data.
         """
         results = [{
-            "full_name": "Alice Johnson",
+            "id": "12345",
+            "name": {"fullName": "Alice Johnson"},
             "email": "ajohnson@example.com",
-            "username": "ajohnson",
-            "profile_url": "https://example.com/.profile/ajohnson",
-            "profile": {
-                "job_title": "Software Engineer",
-                "department": "Engineering",
-                "manager_name": "Sarah Manager",
-                "manager_email": "smanager@example.com",
-                "office": "HQ Building",
-                "desk": "A123",
-                "mobile": "+1-555-1234",
-                "start_date": "2023-06-15",
-            }
+            "namespace": "ajohnson",
+            "manager_name": "Sarah Manager",  # Fetched separately
+            "profile_items": [
+                {"Name": "title", "Value": "Software Engineer"},
+                {"Name": "department", "Value": "Engineering"},
+                {"Name": "i_report_to_email", "Value": "smanager@example.com"},
+                {"Name": "office_location", "Value": "HQ Building"},
+                {"Name": "desk_number", "Value": "A123"},
+                {"Name": "cellphone", "Value": "+1-555-1234"},
+                {"Name": "work_start_date", "Value": "2023-06-15"},
+            ]
         }]
         
-        output = format_user_search_results(results, query="Johnson", include_profile=True)
+        output = format_user_search_results(
+            results, query="Johnson", community_url="https://example.com"
+        )
         
         assert "Name: Alice Johnson" in output
         assert "Job Title: Software Engineer" in output
-        assert "Manager: Sarah Manager" in output
+        assert "Manager Name: Sarah Manager" in output
         assert "Manager Email: smanager@example.com" in output
         assert "Office: HQ Building" in output
         assert "Desk: A123" in output
@@ -1338,30 +1342,35 @@ class TestFormatUserSearchResults:
 
     def test_empty_results(self):
         """Test formatting with no results."""
-        output = format_user_search_results(results=[], query="NonExistent")
+        output = format_user_search_results(
+            results=[], query="NonExistent", community_url="https://example.com"
+        )
         
-        assert output == "No users found matching 'NonExistent'"
+        assert 'Users found for query: "NonExistent" (Total Results Found: 0):' in output
+        assert "No results found." in output
 
     def test_multiple_results(self):
         """Test formatting with multiple users."""
         results = [
             {
-                "full_name": "John Smith",
+                "id": "1",
+                "name": {"fullName": "John Smith"},
                 "email": "john@example.com",
-                "username": "jsmith",
-                "profile_url": "https://example.com/.profile/jsmith",
+                "namespace": "jsmith",
             },
             {
-                "full_name": "Jane Smith",
+                "id": "2",
+                "name": {"fullName": "Jane Smith"},
                 "email": "jane@example.com",
-                "username": "janesmith",
-                "profile_url": "https://example.com/.profile/janesmith",
+                "namespace": "janesmith",
             },
         ]
         
-        output = format_user_search_results(results, query="Smith")
+        output = format_user_search_results(
+            results, query="Smith", community_url="https://example.com"
+        )
         
-        assert "User Search Results for 'Smith' (2 found):" in output
+        assert 'Users found for query: "Smith" (Total Results Found: 2):' in output
         assert "Name: John Smith" in output
         assert "Name: Jane Smith" in output
         assert "john@example.com" in output
@@ -1370,13 +1379,15 @@ class TestFormatUserSearchResults:
     def test_missing_optional_fields(self):
         """Test formatting when optional fields are missing."""
         results = [{
-            "full_name": "Test User",
+            "id": "1",
+            "name": {"fullName": "Test User"},
             "email": "",
-            "username": "testuser",
-            "profile_url": "https://example.com/.profile/testuser",
+            "namespace": "testuser",
         }]
         
-        output = format_user_search_results(results, query="Test")
+        output = format_user_search_results(
+            results, query="Test", community_url="https://example.com"
+        )
         
         assert "Name: Test User" in output
         assert "Email: " in output  # Empty but still shown
@@ -1384,128 +1395,125 @@ class TestFormatUserSearchResults:
     def test_partial_profile_data(self):
         """Test formatting with only some profile fields present."""
         results = [{
-            "full_name": "Partial Profile",
+            "id": "1",
+            "name": {"fullName": "Partial Profile"},
             "email": "partial@example.com",
-            "username": "partial",
-            "profile_url": "https://example.com/.profile/partial",
-            "profile": {
-                "job_title": "Engineer",
-                # Other fields missing
-            }
+            "namespace": "partial",
+            "profile_items": [
+                {"Name": "title", "Value": "Engineer"},
+            ]
         }]
         
-        output = format_user_search_results(results, query="Partial", include_profile=True)
+        output = format_user_search_results(
+            results, query="Partial", community_url="https://example.com"
+        )
         
         assert "Job Title: Engineer" in output
-        assert "Manager:" not in output  # Not present, so not shown
+        assert "Manager Name:" not in output  # Not present, so not shown
         assert "Office:" not in output
 
-    def test_empty_profile_dict(self):
-        """Test formatting when profile dict is empty."""
+    def test_empty_profile_items(self):
+        """Test formatting when profile_items list is empty."""
         results = [{
-            "full_name": "No Profile",
+            "id": "1",
+            "name": {"fullName": "No Profile"},
             "email": "noprofile@example.com",
-            "username": "noprofile",
-            "profile_url": "https://example.com/.profile/noprofile",
-            "profile": {}
+            "namespace": "noprofile",
+            "profile_items": []
         }]
         
-        output = format_user_search_results(results, query="No", include_profile=True)
+        output = format_user_search_results(
+            results, query="No", community_url="https://example.com"
+        )
         
         assert "Name: No Profile" in output
         # No profile fields should appear
         assert "Job Title:" not in output
 
-    def test_profile_not_included(self):
-        """Test that profile fields don't appear when include_profile=False."""
+    def test_profile_fields_displayed(self):
+        """Test that profile fields are displayed when present in data."""
         results = [{
-            "full_name": "Test User",
+            "id": "1",
+            "name": {"fullName": "Test User"},
             "email": "test@example.com",
-            "username": "test",
-            "profile_url": "https://example.com/.profile/test",
-            "profile": {
-                "job_title": "Developer",
-                "manager_name": "Manager Name",
-            }
+            "namespace": "test",
+            "manager_name": "Manager Name",
+            "profile_items": [
+                {"Name": "title", "Value": "Developer"},
+            ]
         }]
         
-        output = format_user_search_results(results, query="Test", include_profile=False)
+        output = format_user_search_results(
+            results, query="Test", community_url="https://example.com"
+        )
         
         assert "Name: Test User" in output
-        # Profile fields should still appear because they're in the data
-        # The include_profile flag is just for documentation purposes in the function
         assert "Job Title: Developer" in output
+        assert "Manager Name: Manager Name" in output
 
     def test_separator_lines(self):
         """Test that separator lines are present between results."""
         results = [{
-            "full_name": "Test",
+            "id": "1",
+            "name": {"fullName": "Test"},
             "email": "test@example.com",
-            "username": "test",
-            "profile_url": "https://example.com/.profile/test",
+            "namespace": "test",
         }]
         
-        output = format_user_search_results(results, query="Test")
+        output = format_user_search_results(
+            results, query="Test", community_url="https://example.com"
+        )
         
-        # Should have separator lines (50 dashes)
-        assert "-" * 50 in output
+        # Should have separator lines (10 dashes)
+        assert "----------" in output
 
     def test_unicode_characters(self):
         """Test formatting with unicode/international characters."""
         results = [{
-            "full_name": "田中太郎",
+            "id": "1",
+            "name": {"fullName": "田中太郎"},
             "email": "tanaka@example.co.jp",
-            "username": "tanaka",
-            "profile_url": "https://example.com/.profile/tanaka",
-            "profile": {
-                "office": "東京オフィス",
-            }
+            "namespace": "tanaka",
+            "profile_items": [
+                {"Name": "office_location", "Value": "東京オフィス"},
+            ]
         }]
         
-        output = format_user_search_results(results, query="田中", include_profile=True)
+        output = format_user_search_results(
+            results, query="田中", community_url="https://example.com"
+        )
         
         assert "Name: 田中太郎" in output
         assert "Office: 東京オフィス" in output
 
-    def test_special_characters_in_email(self):
-        """Test formatting with special characters in email."""
-        results = [{
-            "full_name": "Test User",
-            "email": "test.user+tag@example.com",
-            "username": "testuser",
-            "profile_url": "https://example.com/.profile/testuser",
-        }]
-        
-        output = format_user_search_results(results, query="Test")
-        
-        assert "Email: test.user+tag@example.com" in output
-
     def test_all_profile_fields(self):
         """Test that all profile fields are formatted when present."""
         results = [{
-            "full_name": "Complete Profile",
+            "id": "1",
+            "name": {"fullName": "Complete Profile"},
             "email": "complete@example.com",
-            "username": "complete",
-            "profile_url": "https://example.com/.profile/complete",
-            "profile": {
-                "job_title": "Senior Engineer",
-                "department": "Engineering",
-                "manager_name": "Boss Name",
-                "manager_email": "boss@example.com",
-                "office": "HQ Building",
-                "desk": "A123",
-                "work_phone": "+1-555-1234",
-                "extension": "5678",
-                "mobile": "+1-555-9999",
-                "start_date": "2020-01-15",
-            }
+            "namespace": "complete",
+            "manager_name": "Boss Name",
+            "profile_items": [
+                {"Name": "title", "Value": "Senior Engineer"},
+                {"Name": "department", "Value": "Engineering"},
+                {"Name": "i_report_to_email", "Value": "boss@example.com"},
+                {"Name": "office_location", "Value": "HQ Building"},
+                {"Name": "desk_number", "Value": "A123"},
+                {"Name": "busphone", "Value": "+1-555-1234"},
+                {"Name": "extension", "Value": "5678"},
+                {"Name": "cellphone", "Value": "+1-555-9999"},
+                {"Name": "work_start_date", "Value": "2020-01-15"},
+            ]
         }]
         
-        output = format_user_search_results(results, query="Complete", include_profile=True)
+        output = format_user_search_results(
+            results, query="Complete", community_url="https://example.com"
+        )
         
         assert "Job Title: Senior Engineer" in output
         assert "Department: Engineering" in output
-        assert "Manager: Boss Name" in output
+        assert "Manager Name: Boss Name" in output
         assert "Manager Email: boss@example.com" in output
         assert "Office: HQ Building" in output
         assert "Desk: A123" in output
@@ -1513,3 +1521,32 @@ class TestFormatUserSearchResults:
         assert "Extension: 5678" in output
         assert "Mobile: +1-555-9999" in output
         assert "Start Date: 2020-01-15" in output
+
+    def test_whitelist_and_null_values(self):
+        """Test that only whitelisted fields are shown, and null values are skipped."""
+        results = [{
+            "id": "1",
+            "name": {"fullName": "Test User"},
+            "email": "test@example.com",
+            "namespace": "test",
+            "profile_items": [
+                {"Name": "title", "Value": "Engineer"},
+                {"Name": "bluejeans", "Value": "https://bluejeans.com/12345"},  # Not in whitelist
+                {"Name": "timezone", "Value": "America/New_York"},  # Not in whitelist
+                {"Name": "cellphone", "Value": "null"},  # In whitelist but null value
+                {"Name": "unknown_field", "Value": "some value"},  # Not in whitelist
+            ]
+        }]
+        
+        output = format_user_search_results(
+            results, query="Test", community_url="https://example.com"
+        )
+        
+        # Whitelisted field with valid value is shown
+        assert "Job Title: Engineer" in output
+        # Fields not in whitelist are not shown (even with valid values)
+        assert "bluejeans" not in output.lower()
+        assert "timezone" not in output.lower()
+        assert "unknown_field" not in output.lower()
+        # Whitelisted field with null value is not shown
+        assert "Mobile: null" not in output

@@ -1353,12 +1353,11 @@ async def test_search_users_success(
     client: IglooClient, mocker: MockerFixture
 ):
     """
-    Test successful user search returns correct data structure.
+    Test successful user search returns raw API data.
     
     Verifies that:
     - API endpoint is called correctly
-    - Response is parsed into expected format
-    - All fields are extracted properly
+    - Raw API hits are returned (no field transformation)
     """
     mock_response_content = b'''
     {
@@ -1385,13 +1384,13 @@ async def test_search_users_success(
     results = await client.search_users(query="Johnson", limit=5)
 
     assert len(results) == 1
-    assert results[0]["full_name"] == "Alice Johnson"
-    assert results[0]["first_name"] == "Alice"
-    assert results[0]["last_name"] == "Johnson"
+    # Raw API data is returned as-is
+    assert results[0]["id"] == "12345"
+    assert results[0]["name"]["fullName"] == "Alice Johnson"
+    assert results[0]["name"]["firstName"] == "Alice"
+    assert results[0]["name"]["lastName"] == "Johnson"
     assert results[0]["email"] == "ajohnson@example.com"
-    assert results[0]["username"] == "ajohnson"
-    assert results[0]["user_id"] == "12345"
-    assert results[0]["profile_url"] == f"{BASE_URL}/.profile/ajohnson"
+    assert results[0]["namespace"] == "ajohnson"
     mock_request.assert_called_once()
 
 
@@ -1402,7 +1401,7 @@ async def test_search_users_multiple_results(
     Test user search with multiple results.
     
     Verifies that:
-    - Multiple hits are parsed correctly
+    - Multiple hits are returned correctly
     - Results maintain order
     """
     mock_response_content = b'''
@@ -1427,9 +1426,9 @@ async def test_search_users_multiple_results(
     results = await client.search_users(query="Smith", limit=10)
 
     assert len(results) == 3
-    assert results[0]["full_name"] == "John Smith"
-    assert results[1]["full_name"] == "Jane Smith"
-    assert results[2]["full_name"] == "Bob Smith"
+    assert results[0]["name"]["fullName"] == "John Smith"
+    assert results[1]["name"]["fullName"] == "Jane Smith"
+    assert results[2]["name"]["fullName"] == "Bob Smith"
 
 
 async def test_search_users_respects_limit(
@@ -1446,11 +1445,11 @@ async def test_search_users_respects_limit(
         "response": {
             "value": {
                 "hit": [
-                    {"id": "1", "name": {"fullName": "Person 1"}, "email": "p1@example.com", "namespace": "p1"},
-                    {"id": "2", "name": {"fullName": "Person 2"}, "email": "p2@example.com", "namespace": "p2"},
-                    {"id": "3", "name": {"fullName": "Person 3"}, "email": "p3@example.com", "namespace": "p3"},
-                    {"id": "4", "name": {"fullName": "Person 4"}, "email": "p4@example.com", "namespace": "p4"},
-                    {"id": "5", "name": {"fullName": "Person 5"}, "email": "p5@example.com", "namespace": "p5"}
+                    {"id": "1", "name": {"fullName": "User 1"}, "email": "u1@example.com", "namespace": "u1"},
+                    {"id": "2", "name": {"fullName": "User 2"}, "email": "u2@example.com", "namespace": "u2"},
+                    {"id": "3", "name": {"fullName": "User 3"}, "email": "u3@example.com", "namespace": "u3"},
+                    {"id": "4", "name": {"fullName": "User 4"}, "email": "u4@example.com", "namespace": "u4"},
+                    {"id": "5", "name": {"fullName": "User 5"}, "email": "u5@example.com", "namespace": "u5"}
                 ]
             }
         }
@@ -1462,11 +1461,11 @@ async def test_search_users_respects_limit(
         client._client, "request", return_value=mock_response, new_callable=mocker.AsyncMock
     )
 
-    results = await client.search_users(query="Person", limit=2)
+    results = await client.search_users(query="User", limit=2)
 
     assert len(results) == 2
-    assert results[0]["full_name"] == "Person 1"
-    assert results[1]["full_name"] == "Person 2"
+    assert results[0]["name"]["fullName"] == "User 1"
+    assert results[1]["name"]["fullName"] == "User 2"
 
 
 async def test_search_users_empty_results(
@@ -1493,28 +1492,28 @@ async def test_search_users_empty_results(
         client._client, "request", return_value=mock_response, new_callable=mocker.AsyncMock
     )
 
-    results = await client.search_users(query="NonExistentPerson", limit=5)
+    results = await client.search_users(query="NonExistentUser", limit=5)
 
     assert len(results) == 0
     assert results == []
 
 
-async def test_search_users_missing_fields(
+async def test_search_users_raw_data_returned(
     client: IglooClient, mocker: MockerFixture
 ):
     """
-    Test user search handles missing optional fields gracefully.
+    Test that search_users returns raw API data without transformation.
     
     Verifies that:
-    - Missing fields default to empty strings
-    - No errors when fields are absent
+    - Raw hit objects are returned exactly as API provides them
+    - No field renaming is done (e.g., namespace stays namespace, not username)
     """
     mock_response_content = b'''
     {
         "response": {
             "value": {
                 "hit": [
-                    {"id": "123", "name": {}, "namespace": "user1"}
+                    {"id": "123", "name": {"fullName": "Test"}, "email": "test@example.com", "namespace": "testuser", "extra": "value"}
                 ]
             }
         }
@@ -1526,13 +1525,13 @@ async def test_search_users_missing_fields(
         client._client, "request", return_value=mock_response, new_callable=mocker.AsyncMock
     )
 
-    results = await client.search_users(query="user", limit=5)
+    results = await client.search_users(query="test", limit=5)
 
     assert len(results) == 1
-    assert results[0]["full_name"] == "Unknown"
-    assert results[0]["first_name"] == ""
-    assert results[0]["last_name"] == ""
-    assert results[0]["email"] == ""
+    # Verify raw fields are returned (not transformed)
+    assert "namespace" in results[0]  # Raw field name
+    assert "username" not in results[0]  # Not transformed
+    assert "extra" in results[0]  # Extra fields preserved
 
 
 async def test_search_users_http_error(
@@ -1563,13 +1562,12 @@ async def test_get_user_profile_success(
     client: IglooClient, mocker: MockerFixture
 ):
     """
-    Test successful user profile retrieval with all fields.
+    Test successful user profile retrieval returns raw items.
     
     Verifies that:
-    - Profile fields are correctly mapped
-    - Manager name is fetched via additional API call
+    - Raw profile items are returned as-is from the API
+    - No field transformation is done
     """
-    # Mock the profile API response
     profile_response_content = b'''
     {
         "response": {
@@ -1587,49 +1585,32 @@ async def test_get_user_profile_success(
     }
     '''
     
-    # Mock the manager name lookup response
-    manager_response_content = b'''
-    {
-        "response": {
-            "name": {"fullName": "Sarah Manager"}
-        }
-    }
-    '''
-    
-    profile_request = Request(method="GET", url=f"{BASE_URL}/.api/api.svc/users/12345/viewprofile")
-    manager_request = Request(method="GET", url=f"{BASE_URL}/.api/api.svc/users/67890/view")
-    
-    profile_response = Response(200, content=profile_response_content, request=profile_request)
-    manager_response = Response(200, content=manager_response_content, request=manager_request)
-    
+    request = Request(method="GET", url=f"{BASE_URL}/.api/api.svc/users/12345/viewprofile")
+    mock_response = Response(200, content=profile_response_content, request=request)
     mocker.patch.object(
-        client._client,
-        "request",
-        side_effect=[profile_response, manager_response],
-        new_callable=mocker.AsyncMock
+        client._client, "request", return_value=mock_response, new_callable=mocker.AsyncMock
     )
 
-    profile = await client.get_user_profile("12345")
+    items = await client.get_user_profile("12345")
 
-    assert profile["job_title"] == "Software Engineer"
-    assert profile["department"] == "Engineering"
-    assert profile["manager_email"] == "manager@example.com"
-    assert profile["manager_name"] == "Sarah Manager"
-    assert profile["office"] == "HQ Building"
-    assert profile["desk"] == "A123"
-    assert profile["mobile"] == "+1-555-1234"
-    assert profile["start_date"] == "2023-06-15"
+    # Returns raw items list, not a transformed dict
+    assert isinstance(items, list)
+    assert len(items) == 8
+    
+    # Verify raw structure is preserved
+    assert items[0] == {"Name": "title", "Value": "Software Engineer"}
+    assert items[1] == {"Name": "department", "Value": "Engineering"}
 
 
-async def test_get_user_profile_skips_unwanted_fields(
+async def test_get_user_profile_returns_all_items(
     client: IglooClient, mocker: MockerFixture
 ):
     """
-    Test that profile skips bluejeans and timezone fields.
+    Test that all raw items are returned including fields like bluejeans/timezone.
     
     Verifies that:
-    - Fields in skip_fields are not included
-    - Null/invalid values are filtered out
+    - No filtering is done at the client level
+    - Filtering happens in the formatter instead
     """
     profile_response_content = b'''
     {
@@ -1650,12 +1631,13 @@ async def test_get_user_profile_skips_unwanted_fields(
         client._client, "request", return_value=mock_response, new_callable=mocker.AsyncMock
     )
 
-    profile = await client.get_user_profile("12345")
+    items = await client.get_user_profile("12345")
 
-    assert profile["job_title"] == "Engineer"
-    assert "bluejeans" not in profile
-    assert "timezone" not in profile
-    assert "work_phone" not in profile  # "null" value should be skipped
+    # All items returned, including ones that formatter will skip
+    assert len(items) == 4
+    field_names = [item["Name"] for item in items]
+    assert "bluejeans" in field_names
+    assert "timezone" in field_names
 
 
 async def test_get_user_profile_empty_response(
@@ -1665,7 +1647,7 @@ async def test_get_user_profile_empty_response(
     Test profile retrieval with empty items list.
     
     Verifies that:
-    - Empty dict is returned for profiles with no data
+    - Empty list is returned for profiles with no data
     """
     profile_response_content = b'''
     {
@@ -1681,51 +1663,9 @@ async def test_get_user_profile_empty_response(
         client._client, "request", return_value=mock_response, new_callable=mocker.AsyncMock
     )
 
-    profile = await client.get_user_profile("12345")
+    items = await client.get_user_profile("12345")
 
-    assert profile == {}
-
-
-async def test_get_user_profile_manager_lookup_fails(
-    client: IglooClient, mocker: MockerFixture
-):
-    """
-    Test profile retrieval when manager name lookup fails.
-    
-    Verifies that:
-    - Profile is still returned even if manager lookup fails
-    - manager_name is not included but manager_email is
-    """
-    profile_response_content = b'''
-    {
-        "response": {
-            "items": [
-                {"Name": "title", "Value": "Developer"},
-                {"Name": "i_report_to", "Value": "99999"},
-                {"Name": "i_report_to_email", "Value": "manager@example.com"}
-            ]
-        }
-    }
-    '''
-    
-    profile_request = Request(method="GET", url=f"{BASE_URL}/.api/api.svc/users/12345/viewprofile")
-    manager_request = Request(method="GET", url=f"{BASE_URL}/.api/api.svc/users/99999/view")
-    
-    profile_response = Response(200, content=profile_response_content, request=profile_request)
-    manager_response = Response(404, content=b"Not Found", request=manager_request)
-    
-    mocker.patch.object(
-        client._client,
-        "request",
-        side_effect=[profile_response, manager_response],
-        new_callable=mocker.AsyncMock
-    )
-
-    profile = await client.get_user_profile("12345")
-
-    assert profile["job_title"] == "Developer"
-    assert profile["manager_email"] == "manager@example.com"
-    assert "manager_name" not in profile  # Lookup failed, so not included
+    assert items == []
 
 
 async def test_get_user_profile_http_error(
@@ -1745,6 +1685,61 @@ async def test_get_user_profile_http_error(
 
     with pytest.raises(httpx.HTTPStatusError):
         await client.get_user_profile("12345")
+
+
+# ============================================================================
+# Get User Name Tests
+# ============================================================================
+
+
+async def test_get_user_name_success(
+    client: IglooClient, mocker: MockerFixture
+):
+    """
+    Test successful user name retrieval returns raw response.
+    
+    Verifies that:
+    - Raw API response is returned
+    - Name info is accessible from response
+    """
+    response_content = b'''
+    {
+        "response": {
+            "name": {"fullName": "Sarah Manager", "firstName": "Sarah", "lastName": "Manager"}
+        }
+    }
+    '''
+    
+    request = Request(method="GET", url=f"{BASE_URL}/.api/api.svc/users/67890/view")
+    mock_response = Response(200, content=response_content, request=request)
+    mocker.patch.object(
+        client._client, "request", return_value=mock_response, new_callable=mocker.AsyncMock
+    )
+
+    result = await client.get_user_name("67890")
+
+    # Returns raw response object
+    assert result["name"]["fullName"] == "Sarah Manager"
+    assert result["name"]["firstName"] == "Sarah"
+
+
+async def test_get_user_name_http_error(
+    client: IglooClient, mocker: MockerFixture
+):
+    """
+    Test get_user_name handles HTTP errors.
+    
+    Verifies that:
+    - HTTPStatusError is raised for error responses
+    """
+    request = Request(method="GET", url=f"{BASE_URL}/.api/api.svc/users/99999/view")
+    mock_response = Response(404, content=b"Not Found", request=request)
+    mocker.patch.object(
+        client._client, "request", return_value=mock_response, new_callable=mocker.AsyncMock
+    )
+
+    with pytest.raises(httpx.HTTPStatusError):
+        await client.get_user_name("99999")
 
 
 # ============================================================================

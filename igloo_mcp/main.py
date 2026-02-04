@@ -483,27 +483,40 @@ async def user_search_tool(
     
     client = ctx.request_context.lifespan_context.igloo_client
     
-    # Search for users
-    results = await client.search_users(query=query, limit=limit)
+    # Search for users (returns raw API data)
+    raw_results = await client.search_users(query=query, limit=limit)
     
-    if not results:
-        return f"No users found matching '{query}'"
+    if not raw_results:
+        return format_user_search_results(results=[], query=query, community_url=client.community)
     
     # Fetch detailed profile for each user if requested
     if include_profile:
-        for user in results:
-            if user.get("user_id"):
+        for user in raw_results:
+            user_id = user.get("id")
+            if user_id:
                 try:
-                    profile = await client.get_user_profile(user["user_id"])
-                    user["profile"] = profile
+                    # Get raw profile items
+                    profile_items = await client.get_user_profile(user_id)
+                    user["profile_items"] = profile_items
+                    
+                    # Check if there's a manager ID and fetch manager name
+                    for item in profile_items:
+                        if item.get("Name") == "i_report_to" and item.get("Value"):
+                            try:
+                                manager_response = await client.get_user_name(item["Value"])
+                                user["manager_name"] = manager_response.get("name", {}).get("fullName")
+                            except Exception:
+                                pass
+                            break
                 except Exception as exc:
-                    logger.warning(f"Failed to fetch profile for {user.get('full_name')}: {exc}")
-                    user["profile"] = {}
+                    user_name = user.get("name", {}).get("fullName", "Unknown")
+                    logger.warning(f"Failed to fetch profile for {user_name}: {exc}")
+                    user["profile_items"] = []
     
     return format_user_search_results(
-        results=results,
+        results=raw_results,
         query=query,
-        include_profile=include_profile,
+        community_url=client.community,
     )
 
 
