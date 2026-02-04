@@ -1037,7 +1037,7 @@ class TestFormatTruncationMetadata:
         
         result = format_truncation_metadata(metadata, url)
         
-        assert "CONTENT TRUNCATED" in result
+        assert "⚠️ CONTENT TRUNCATED" in result
         assert "Showing 1,000 of 5,000 chars (20% of document)" in result
         assert "To continue reading" not in result
 
