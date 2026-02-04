@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Demo: People Search API Endpoints for Igloo
+Demo: User Search API Endpoints for Igloo
 
-This script demonstrates the 3 API endpoints used by the people_search tool.
+This script demonstrates the 3 API endpoints used by the user_search tool.
 It calls each endpoint directly and shows the request and response.
 
 Usage: run this command:
-    uv run python demo_people_search.py "<some employee name>" 
+    uv run python demo_user_search.py "<some employee name>" 
 
 The 3 API Endpoints Used:
-    1. GET /.api/api.svc/search/members?q={query}     - Search for people by name
+    1. GET /.api/api.svc/search/members?q={query}     - Search for users by name
     2. GET /.api/api.svc/users/{id}/viewprofile       - Get detailed profile info
     3. GET /.api/api.svc/users/{id}/view              - Get user's name by ID (for manager lookup)
 """
@@ -84,7 +84,7 @@ async def authenticate(client: httpx.AsyncClient) -> bool:
 # Request:  GET /.api/api.svc/search/members?q={query}
 # Response: { "response": { "value": { "hit": [ { "id", "name", "email", "namespace" } ] } } }
 
-async def search_members(client: httpx.AsyncClient, query: str) -> list[dict]:
+async def search_users(client: httpx.AsyncClient, query: str) -> list[dict]:
     """
     ENDPOINT 1: Search for people by name.
     
@@ -280,12 +280,12 @@ async def get_user_name(client: httpx.AsyncClient, user_id: str) -> str | None:
 
 async def main():
     if len(sys.argv) < 2:
-        print("\nUsage: uv run python demo_people_search.py \"NAME\"")
+        print("\nUsage: uv run python demo_user_search.py \"NAME\"")
         print("\nExamples:")
-        print("  uv run python demo_people_search.py \"John Smith\"")
-        print("  uv run python demo_people_search.py \"Jane\"")
-        print("\nThis script demonstrates the 3 API endpoints used by people_search:")
-        print("  1. /.api/api.svc/search/members       - Search for people")
+        print("  uv run python demo_user_search.py \"John Smith\"")
+        print("  uv run python demo_user_search.py \"Jane\"")
+        print("\nThis script demonstrates the 3 API endpoints used by user_search:")
+        print("  1. /.api/api.svc/search/members       - Search for users")
         print("  2. /.api/api.svc/users/{id}/viewprofile - Get profile details")
         print("  3. /.api/api.svc/users/{id}/view      - Get name by ID")
         sys.exit(1)
@@ -309,7 +309,7 @@ async def main():
             sys.exit(1)
         
         # Endpoint 1: Search for people
-        results = await search_members(client, query)
+        results = await search_users(client, query)
         
         if not results:
             print("\nNo people found matching the query.")

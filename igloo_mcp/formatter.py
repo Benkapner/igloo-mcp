@@ -268,36 +268,36 @@ def format_truncation_metadata(metadata: "TruncationMetadata", url: str) -> str:
     return "\n".join(lines)
 
 
-def format_people_search_results(
+def format_user_search_results(
     results: list[dict[str, Any]],
     query: str,
     include_profile: bool = False,
 ) -> str:
     """
-    Format people search results for LLM consumption.
+    Format user search results for LLM consumption.
     
     Args:
-        results: List of person records with profile data
+        results: List of user records with profile data
         query: The original search query
         include_profile: Whether detailed profile was fetched
     """
     if not results:
-        return f"No people found matching '{query}'"
+        return f"No users found matching '{query}'"
     
     output = []
-    output.append(f"People Search Results for '{query}' ({len(results)} found):")
+    output.append(f"User Search Results for '{query}' ({len(results)} found):")
     output.append("-" * 50)
     
-    for person in results:
+    for user in results:
         lines = [
-            f"Name: {person.get('full_name', 'Unknown')}",
-            f"Email: {person.get('email', 'N/A')}",
-            f"Username: {person.get('username', 'N/A')}",
-            f"Profile URL: {person.get('profile_url', 'N/A')}",
+            f"Name: {user.get('full_name', 'Unknown')}",
+            f"Email: {user.get('email', 'N/A')}",
+            f"Username: {user.get('username', 'N/A')}",
+            f"Profile URL: {user.get('profile_url', 'N/A')}",
         ]
         
         # Add profile details if available
-        profile = person.get("profile", {})
+        profile = user.get("profile", {})
         if profile:
             if profile.get("job_title"):
                 lines.append(f"Job Title: {profile['job_title']}")

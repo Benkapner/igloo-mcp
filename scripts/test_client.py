@@ -96,28 +96,28 @@ async def main():
             else:
                 print("No content returned from fetch.")
 
-            # Step 4: Test people_search tool
+            # Step 4: Test user_search tool
             print(f"\n{'='*60}")
-            print("STEP 3: PEOPLE SEARCH")
+            print("STEP 3: USER SEARCH")
             print(f"{'='*60}")
             
-            people_search_args = {
+            user_search_args = {
                 "query": "John",
                 "include_profile": True,
                 "limit": 3,
             }
             
-            print(f"Calling 'people_search' with: {people_search_args}")
+            print(f"Calling 'user_search' with: {user_search_args}")
             
-            people_result = await session.call_tool("people_search", people_search_args)
+            user_result = await session.call_tool("user_search", user_search_args)
             
-            if people_result.isError:
-                print(f"Error calling people_search tool: {people_result}")
-            elif people_result.content and len(people_result.content) > 0:
-                print("\n--- People Search Results ---")
-                print(people_result.content[0].text)
+            if user_result.isError:
+                print(f"Error calling user_search tool: {user_result}")
+            elif user_result.content and len(user_result.content) > 0:
+                print("\n--- User Search Results ---")
+                print(user_result.content[0].text)
             else:
-                print("No results from people_search.")
+                print("No results from user_search.")
 
             print(f"\n{'='*60}")
             print("Test client finished.")

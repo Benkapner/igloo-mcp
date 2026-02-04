@@ -1345,15 +1345,15 @@ class TestIglooClientInitialization:
 
 
 # ============================================================================
-# Search Members Tests
+# Search Users Tests
 # ============================================================================
 
 
-async def test_search_members_success(
+async def test_search_users_success(
     client: IglooClient, mocker: MockerFixture
 ):
     """
-    Test successful member search returns correct data structure.
+    Test successful user search returns correct data structure.
     
     Verifies that:
     - API endpoint is called correctly
@@ -1382,7 +1382,7 @@ async def test_search_members_success(
         client._client, "request", return_value=mock_response, new_callable=mocker.AsyncMock
     )
 
-    results = await client.search_members(query="Johnson", limit=5)
+    results = await client.search_users(query="Johnson", limit=5)
 
     assert len(results) == 1
     assert results[0]["full_name"] == "Alice Johnson"
@@ -1395,11 +1395,11 @@ async def test_search_members_success(
     mock_request.assert_called_once()
 
 
-async def test_search_members_multiple_results(
+async def test_search_users_multiple_results(
     client: IglooClient, mocker: MockerFixture
 ):
     """
-    Test member search with multiple results.
+    Test user search with multiple results.
     
     Verifies that:
     - Multiple hits are parsed correctly
@@ -1424,7 +1424,7 @@ async def test_search_members_multiple_results(
         client._client, "request", return_value=mock_response, new_callable=mocker.AsyncMock
     )
 
-    results = await client.search_members(query="Smith", limit=10)
+    results = await client.search_users(query="Smith", limit=10)
 
     assert len(results) == 3
     assert results[0]["full_name"] == "John Smith"
@@ -1432,11 +1432,11 @@ async def test_search_members_multiple_results(
     assert results[2]["full_name"] == "Bob Smith"
 
 
-async def test_search_members_respects_limit(
+async def test_search_users_respects_limit(
     client: IglooClient, mocker: MockerFixture
 ):
     """
-    Test that search_members respects the limit parameter.
+    Test that search_users respects the limit parameter.
     
     Verifies that:
     - Only 'limit' number of results are returned even if API returns more
@@ -1462,18 +1462,18 @@ async def test_search_members_respects_limit(
         client._client, "request", return_value=mock_response, new_callable=mocker.AsyncMock
     )
 
-    results = await client.search_members(query="Person", limit=2)
+    results = await client.search_users(query="Person", limit=2)
 
     assert len(results) == 2
     assert results[0]["full_name"] == "Person 1"
     assert results[1]["full_name"] == "Person 2"
 
 
-async def test_search_members_empty_results(
+async def test_search_users_empty_results(
     client: IglooClient, mocker: MockerFixture
 ):
     """
-    Test member search with no results.
+    Test user search with no results.
     
     Verifies that:
     - Empty list is returned when no matches found
@@ -1493,17 +1493,17 @@ async def test_search_members_empty_results(
         client._client, "request", return_value=mock_response, new_callable=mocker.AsyncMock
     )
 
-    results = await client.search_members(query="NonExistentPerson", limit=5)
+    results = await client.search_users(query="NonExistentPerson", limit=5)
 
     assert len(results) == 0
     assert results == []
 
 
-async def test_search_members_missing_fields(
+async def test_search_users_missing_fields(
     client: IglooClient, mocker: MockerFixture
 ):
     """
-    Test member search handles missing optional fields gracefully.
+    Test user search handles missing optional fields gracefully.
     
     Verifies that:
     - Missing fields default to empty strings
@@ -1526,7 +1526,7 @@ async def test_search_members_missing_fields(
         client._client, "request", return_value=mock_response, new_callable=mocker.AsyncMock
     )
 
-    results = await client.search_members(query="user", limit=5)
+    results = await client.search_users(query="user", limit=5)
 
     assert len(results) == 1
     assert results[0]["full_name"] == "Unknown"
@@ -1535,11 +1535,11 @@ async def test_search_members_missing_fields(
     assert results[0]["email"] == ""
 
 
-async def test_search_members_http_error(
+async def test_search_users_http_error(
     client: IglooClient, mocker: MockerFixture
 ):
     """
-    Test member search handles HTTP errors.
+    Test user search handles HTTP errors.
     
     Verifies that:
     - HTTPStatusError is raised for error responses
@@ -1551,7 +1551,7 @@ async def test_search_members_http_error(
     )
 
     with pytest.raises(httpx.HTTPStatusError):
-        await client.search_members(query="test", limit=5)
+        await client.search_users(query="test", limit=5)
 
 
 # ============================================================================

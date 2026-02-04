@@ -306,20 +306,20 @@ class IglooClient:
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return list(results)
 
-    async def search_members(
+    async def search_users(
         self,
         query: str,
         limit: int = 10,
     ) -> list[dict[str, Any]]:
         """
-        Search for members/people in the community.
+        Search for users in the community.
         
         Args:
             query: Name or partial name to search for
             limit: Maximum number of results to return
             
         Returns:
-            List of member records with basic info (name, email, username, user_id)
+            List of user records with basic info (name, email, username, user_id)
         """
         endpoint = "/.api/api.svc/search/members"
         response = await self._request(
@@ -351,7 +351,7 @@ class IglooClient:
         Get detailed profile information for a user.
         
         Args:
-            user_id: The user's ID (from search_members results)
+            user_id: The user's ID (from search_users results)
             
         Returns:
             Dict with profile fields (title, manager, office, phone, etc.)

@@ -9,7 +9,7 @@ from igloo_mcp.formatter import (
     format_fetch_result,
     format_fetch_results,
     format_truncation_metadata,
-    format_people_search_results,
+    format_user_search_results,
     _format_header,
     _format_single_result,
     _format_date,
@@ -1282,12 +1282,12 @@ More content here.
         assert "---" in result
 
 
-class TestFormatPeopleSearchResults:
-    """Tests for the format_people_search_results function."""
+class TestFormatUserSearchResults:
+    """Tests for the format_user_search_results function."""
 
     def test_basic_formatting(self):
         """
-        Test basic people search formatting with minimal data.
+        Test basic user search formatting with minimal data.
         """
         results = [{
             "full_name": "Alice Johnson",
@@ -1296,9 +1296,9 @@ class TestFormatPeopleSearchResults:
             "profile_url": "https://example.com/.profile/ajohnson",
         }]
         
-        output = format_people_search_results(results, query="Johnson")
+        output = format_user_search_results(results, query="Johnson")
         
-        assert "People Search Results for 'Johnson' (1 found):" in output
+        assert "User Search Results for 'Johnson' (1 found):" in output
         assert "Name: Alice Johnson" in output
         assert "Email: ajohnson@example.com" in output
         assert "Username: ajohnson" in output
@@ -1325,7 +1325,7 @@ class TestFormatPeopleSearchResults:
             }
         }]
         
-        output = format_people_search_results(results, query="Johnson", include_profile=True)
+        output = format_user_search_results(results, query="Johnson", include_profile=True)
         
         assert "Name: Alice Johnson" in output
         assert "Job Title: Software Engineer" in output
@@ -1338,12 +1338,12 @@ class TestFormatPeopleSearchResults:
 
     def test_empty_results(self):
         """Test formatting with no results."""
-        output = format_people_search_results(results=[], query="NonExistent")
+        output = format_user_search_results(results=[], query="NonExistent")
         
-        assert output == "No people found matching 'NonExistent'"
+        assert output == "No users found matching 'NonExistent'"
 
     def test_multiple_results(self):
-        """Test formatting with multiple people."""
+        """Test formatting with multiple users."""
         results = [
             {
                 "full_name": "John Smith",
@@ -1359,9 +1359,9 @@ class TestFormatPeopleSearchResults:
             },
         ]
         
-        output = format_people_search_results(results, query="Smith")
+        output = format_user_search_results(results, query="Smith")
         
-        assert "People Search Results for 'Smith' (2 found):" in output
+        assert "User Search Results for 'Smith' (2 found):" in output
         assert "Name: John Smith" in output
         assert "Name: Jane Smith" in output
         assert "john@example.com" in output
@@ -1376,7 +1376,7 @@ class TestFormatPeopleSearchResults:
             "profile_url": "https://example.com/.profile/testuser",
         }]
         
-        output = format_people_search_results(results, query="Test")
+        output = format_user_search_results(results, query="Test")
         
         assert "Name: Test User" in output
         assert "Email: " in output  # Empty but still shown
@@ -1394,7 +1394,7 @@ class TestFormatPeopleSearchResults:
             }
         }]
         
-        output = format_people_search_results(results, query="Partial", include_profile=True)
+        output = format_user_search_results(results, query="Partial", include_profile=True)
         
         assert "Job Title: Engineer" in output
         assert "Manager:" not in output  # Not present, so not shown
@@ -1410,7 +1410,7 @@ class TestFormatPeopleSearchResults:
             "profile": {}
         }]
         
-        output = format_people_search_results(results, query="No", include_profile=True)
+        output = format_user_search_results(results, query="No", include_profile=True)
         
         assert "Name: No Profile" in output
         # No profile fields should appear
@@ -1429,7 +1429,7 @@ class TestFormatPeopleSearchResults:
             }
         }]
         
-        output = format_people_search_results(results, query="Test", include_profile=False)
+        output = format_user_search_results(results, query="Test", include_profile=False)
         
         assert "Name: Test User" in output
         # Profile fields should still appear because they're in the data
@@ -1445,7 +1445,7 @@ class TestFormatPeopleSearchResults:
             "profile_url": "https://example.com/.profile/test",
         }]
         
-        output = format_people_search_results(results, query="Test")
+        output = format_user_search_results(results, query="Test")
         
         # Should have separator lines (50 dashes)
         assert "-" * 50 in output
@@ -1462,7 +1462,7 @@ class TestFormatPeopleSearchResults:
             }
         }]
         
-        output = format_people_search_results(results, query="田中", include_profile=True)
+        output = format_user_search_results(results, query="田中", include_profile=True)
         
         assert "Name: 田中太郎" in output
         assert "Office: 東京オフィス" in output
@@ -1476,7 +1476,7 @@ class TestFormatPeopleSearchResults:
             "profile_url": "https://example.com/.profile/testuser",
         }]
         
-        output = format_people_search_results(results, query="Test")
+        output = format_user_search_results(results, query="Test")
         
         assert "Email: test.user+tag@example.com" in output
 
@@ -1501,7 +1501,7 @@ class TestFormatPeopleSearchResults:
             }
         }]
         
-        output = format_people_search_results(results, query="Complete", include_profile=True)
+        output = format_user_search_results(results, query="Complete", include_profile=True)
         
         assert "Job Title: Senior Engineer" in output
         assert "Department: Engineering" in output
