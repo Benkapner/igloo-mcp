@@ -96,28 +96,56 @@ async def main():
             else:
                 print("No content returned from fetch.")
 
-            # Step 4: Test user_search tool
+            # Step 4: Test search_members tool
             print(f"\n{'='*60}")
-            print("STEP 3: USER SEARCH")
+            print("STEP 3: SEARCH MEMBERS")
             print(f"{'='*60}")
             
-            user_search_args = {
-                "query": "John",
-                "include_profile": True,
+            search_member_args = {
+                "query": "H",
                 "limit": 3,
             }
             
-            print(f"Calling 'user_search' with: {user_search_args}")
+            print(f"Calling 'search_members' with: {search_member_args}")
             
-            user_result = await session.call_tool("user_search", user_search_args)
+            member_result = await session.call_tool("search_members", search_member_args)
             
-            if user_result.isError:
-                print(f"Error calling user_search tool: {user_result}")
-            elif user_result.content and len(user_result.content) > 0:
-                print("\n--- User Search Results ---")
-                print(user_result.content[0].text)
+            if member_result.isError:
+                print(f"Error calling search_members tool: {member_result}")
+            elif member_result.content and len(member_result.content) > 0:
+                print("\n--- Member Search Results ---")
+                member_text = member_result.content[0].text
+                print(member_text)
+                
+                # Step 5: Extract a member ID and fetch full profile
+                # Member IDs can be UUIDs (e.g., 3ddaaa7d-7ac5-4b75-b0d3-fae0646a0230) or numeric
+                member_id_match = re.search(r'Member ID: ([a-zA-Z0-9-]+)', member_text)
+                if member_id_match:
+                    member_id = member_id_match.group(1)
+                    
+                    print(f"\n{'='*60}")
+                    print("STEP 4: FETCH MEMBERS PROFILE")
+                    print(f"{'='*60}")
+                    
+                    fetch_member_args = {
+                        "member_id": member_id,
+                    }
+                    
+                    print(f"Calling 'fetch_members' with: {fetch_member_args}")
+                    
+                    profile_result = await session.call_tool("fetch_members", fetch_member_args)
+                    
+                    if profile_result.isError:
+                        print(f"Error calling fetch_members tool: {profile_result}")
+                    elif profile_result.content and len(profile_result.content) > 0:
+                        print("\n--- Member Profile ---")
+                        print(profile_result.content[0].text)
+                    else:
+                        print("No profile returned from fetch_members.")
+                else:
+                    print("\nNo member ID found in search results to fetch profile.")
             else:
-                print("No results from user_search.")
+                print("No results from search_members.")
 
             print(f"\n{'='*60}")
             print("Test client finished.")

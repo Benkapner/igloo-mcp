@@ -268,36 +268,60 @@ def format_truncation_metadata(metadata: "TruncationMetadata", url: str) -> str:
     return "\n".join(lines)
 
 
-def format_user_search_results(
+def format_member_search_results(
     results: list[dict[str, Any]],
     query: str,
     community_url: str = "",
 ) -> str:
     """
-    Format user search results for LLM consumption.
+    Format member search results for LLM consumption.
+    Returns basic info only (no profile details). Use format_member_profile for details.
     
     Args:
-        results: List of raw user records from the API
+        results: List of raw member records from the API
         query: The original search query
         community_url: The base URL of the Igloo community (for building profile URLs)
     
     Returns:
-        A formatted string containing the user search results with header and individual result sections.
+        A formatted string containing the member search results with basic info.
     """
-    header = f'Users found for query: "{query}" (Total Results Found: {len(results)}):'
+    header = f'Members found for query: "{query}" (Total Results Found: {len(results)}):'
     
     if not results:
         return f"{header}\n\nNo results found."
     
     formatted_results = [header]
     
-    for user in results:
+    for member in results:
         formatted_results.append("\n----------\n")
-        formatted_results.append(_format_single_user_result(user, community_url))
+        formatted_results.append(_format_member_basic_info(member, community_url))
     
     formatted_results.append("\n----------")
     
     return "".join(formatted_results)
+
+
+def _format_member_basic_info(member: dict[str, Any], community_url: str = "") -> str:
+    """
+    Format basic info for a single member (used in search results).
+    Minimal output to save tokens - use fetch_member for full details.
+    
+    Args:
+        member: Raw member record from the API
+        community_url: Base URL for building profile links (unused, kept for API compatibility)
+    """
+    name_info = member.get("name", {})
+    full_name = name_info.get("fullName", "Unknown")
+    email = member.get("email", "N/A")
+    member_id = member.get("id", "N/A")
+    
+    lines = [
+        f"Name: {full_name}",
+        f"Email: {email}",
+        f"Member ID: {member_id}",
+    ]
+    
+    return "\n".join(lines)
 
 
 # Map raw API profile field names to display labels (whitelist approach)
@@ -315,34 +339,44 @@ PROFILE_FIELD_MAPPING = {
 }
 
 
-def _format_single_user_result(user: dict[str, Any], community_url: str = "") -> str:
+def format_member_profile(
+    member_info: dict[str, Any],
+    profile_items: list[dict[str, Any]],
+    manager_name: str | None,
+    community_url: str = "",
+) -> str:
     """
-    Format a single user search result from raw API data.
+    Format detailed member profile for LLM consumption.
     
     Args:
-        user: Raw user record from the API with fields like id, name, email, namespace, profile_items
-        community_url: Base URL for building profile links
+        member_info: Raw member info from get_member_info API call
+        profile_items: List of raw profile items from get_member_profile API call
+        manager_name: Manager's full name (fetched separately), or None
+        community_url: The base URL of the Igloo community
+    
+    Returns:
+        A formatted string containing the detailed member profile.
     """
-    # Extract basic info from raw API structure
-    name_info = user.get("name", {})
+    name_info = member_info.get("name", {})
     full_name = name_info.get("fullName", "Unknown")
-    email = user.get("email", "N/A")
-    username = user.get("namespace", "N/A")
+    email = member_info.get("email", "N/A")
+    username = member_info.get("namespace", "N/A")
     profile_url = f"{community_url}/.profile/{username}" if community_url and username else "N/A"
     
     lines = [
+        f"Member Profile: {full_name}",
+        "----------",
         f"Name: {full_name}",
         f"Email: {email}",
         f"Username: {username}",
         f"Profile URL: {profile_url}",
     ]
     
-    # Add manager name if available (fetched separately in main.py)
-    if manager_name := user.get("manager_name"):
+    # Add manager name if available
+    if manager_name:
         lines.append(f"Manager Name: {manager_name}")
     
-    # Process raw profile items
-    profile_items = user.get("profile_items", [])
+    # Process raw profile items using whitelist
     for item in profile_items:
         field_name = item.get("Name", "")
         field_value = item.get("Value", "")
@@ -351,15 +385,17 @@ def _format_single_user_result(user: dict[str, Any], community_url: str = "") ->
         if not field_value or field_value in ("null", "https://bluejeans.com/null"):
             continue
         
-        # Get display label (use mapping or convert field name)
+        # Get display label from whitelist
         label = PROFILE_FIELD_MAPPING.get(field_name)
         if not label:
-            continue  # Only show fields we have mappings for
+            continue  # Only show fields in the whitelist
         
         # Clean up date format
         if "date" in field_name and " " in str(field_value):
             field_value = str(field_value).split(" ")[0]
         
         lines.append(f"{label}: {field_value}")
+    
+    lines.append("----------")
     
     return "\n".join(lines)

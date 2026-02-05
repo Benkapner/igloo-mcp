@@ -21,7 +21,8 @@ from igloo_mcp.formatter import (
     format_fetch_result,
     format_fetch_results,
     format_truncation_metadata,
-    format_user_search_results,
+    format_member_search_results,
+    format_member_profile,
 )
 from igloo_mcp.igloo import ApplicationType, IglooClient, UpdatedDateType
 from igloo_mcp.logger import logger, configure_logger
@@ -454,68 +455,111 @@ async def fetch_tool(
     )
 
 
-@mcp.tool(name="user_search")
-async def user_search_tool(
+@mcp.tool(name="search_members")
+async def search_members_tool(
     ctx: Context[ServerSession, AppContext],
     query: str,
-    include_profile: bool = True,
-    limit: int = 5,
+    limit: int = 10,
 ) -> str:
     """
-    Search for users in the Igloo community by name.
+    Search for members in the Igloo community by name.
+    Returns basic info only (name, email, member ID). Use fetch_members to get detailed profile.
     
-    Use this tool when users ask about:
-    - Who someone is ("Who is John Smith?")
-    - Contact information ("How can I contact Jane?")
-    - Finding users by name ("Find John Smith")
-    - Manager/reporting structure ("Who does X report to?")
+    Use this tool when:
+    - Looking for someone by name ("Find John Smith")
+    - Need to identify which member to get more info about
     
     Args:
         query: Name or partial name to search for (e.g., "John Smith", "Jane")
-        include_profile: If True, fetches detailed profile info (title, manager, phone, office).
-                        Set to False for faster results with just basic info.
-        limit: Maximum number of users to return (default: 5)
+        limit: Maximum number of members to return (default: 10)
     
     Returns:
-        Formatted list of matching users with their contact and profile information.
+        List of matching members with basic info and their member IDs.
+        Use the member_id with fetch_members to get detailed profile.
     """
-    logger.info(f"Processing user_search request for query: {query}")
+    logger.info(f"Processing search_members request for query: {query}")
     
     client = ctx.request_context.lifespan_context.igloo_client
     
-    # Search for users (returns raw API data)
-    raw_results = await client.search_users(query=query, limit=limit)
+    # Search for members (returns raw API data)
+    raw_results = await client.search_members(query=query, limit=limit)
     
-    if not raw_results:
-        return format_user_search_results(results=[], query=query, community_url=client.community)
-    
-    # Fetch detailed profile for each user if requested
-    if include_profile:
-        for user in raw_results:
-            user_id = user.get("id")
-            if user_id:
-                try:
-                    # Get raw profile items
-                    profile_items = await client.get_user_profile(user_id)
-                    user["profile_items"] = profile_items
-                    
-                    # Check if there's a manager ID and fetch manager name
-                    for item in profile_items:
-                        if item.get("Name") == "i_report_to" and item.get("Value"):
-                            try:
-                                manager_response = await client.get_user_name(item["Value"])
-                                user["manager_name"] = manager_response.get("name", {}).get("fullName")
-                            except Exception:
-                                pass
-                            break
-                except Exception as exc:
-                    user_name = user.get("name", {}).get("fullName", "Unknown")
-                    logger.warning(f"Failed to fetch profile for {user_name}: {exc}")
-                    user["profile_items"] = []
-    
-    return format_user_search_results(
+    return format_member_search_results(
         results=raw_results,
         query=query,
+        community_url=client.community,
+    )
+
+
+@mcp.tool(name="fetch_members")
+async def fetch_members_tool(
+    ctx: Context[ServerSession, AppContext],
+    member_id: str | list[str],
+) -> str:
+    """
+    Get detailed profile for one or more members by their ID(s).
+    Use search_members first to find member IDs.
+    
+    Use this tool when:
+    - Need detailed info about specific members (job title, manager, phone, office)
+    - Already have member_id(s) from search_members results
+    
+    Args:
+        member_id: A single member ID or list of member IDs (from search_members results)
+            Example single: "12345-abcd-..."
+            Example multiple: ["12345-abcd-...", "67890-efgh-..."]
+    
+    Returns:
+        Detailed member profile(s) including job title, manager, contact info, etc.
+    """
+    client = ctx.request_context.lifespan_context.igloo_client
+    
+    # Handle single member_id
+    if isinstance(member_id, str):
+        logger.info(f"Processing fetch_members request for member_id: {member_id}")
+        return await _fetch_single_member(client, member_id)
+    
+    # Handle list of member_ids
+    member_ids = member_id
+    logger.info(f"Processing fetch_members request for {len(member_ids)} members")
+    
+    if len(member_ids) == 0:
+        return "Error: No member IDs provided."
+    
+    results = []
+    for i, mid in enumerate(member_ids, start=1):
+        try:
+            profile = await _fetch_single_member(client, mid)
+            results.append(f"===== MEMBER {i} of {len(member_ids)} =====\n{profile}")
+        except Exception as e:
+            results.append(f"===== MEMBER {i} of {len(member_ids)} =====\nError fetching member {mid}: {e}")
+    
+    return "\n\n".join(results)
+
+
+async def _fetch_single_member(client, member_id: str) -> str:
+    """Helper to fetch a single member's profile."""
+    # Get member basic info
+    member_info = await client.get_member_info(member_id)
+    
+    # Get profile items
+    profile_items = await client.get_member_profile(member_id)
+    
+    # Get manager name if available
+    manager_name = None
+    for item in profile_items:
+        if item.get("Name") == "i_report_to" and item.get("Value"):
+            try:
+                manager_response = await client.get_member_info(item["Value"])
+                manager_name = manager_response.get("name", {}).get("fullName")
+            except Exception:
+                pass
+            break
+    
+    return format_member_profile(
+        member_info=member_info,
+        profile_items=profile_items,
+        manager_name=manager_name,
         community_url=client.community,
     )
 

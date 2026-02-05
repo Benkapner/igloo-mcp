@@ -306,20 +306,20 @@ class IglooClient:
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return list(results)
 
-    async def search_users(
+    async def search_members(
         self,
         query: str,
         limit: int = 10,
     ) -> list[dict[str, Any]]:
         """
-        Search for users in the community.
+        Search for members in the community.
         
         Args:
             query: Name or partial name to search for
             limit: Maximum number of results to return
             
         Returns:
-            List of raw user records from the API (limited to `limit` results).
+            List of raw member records from the API (limited to `limit` results).
             Each record contains fields like: id, name (with fullName, firstName, lastName),
             email, namespace, etc.
         """
@@ -335,17 +335,17 @@ class IglooClient:
         
         return hits[:limit]
 
-    async def get_user_profile(self, user_id: str) -> list[dict[str, Any]]:
+    async def get_member_profile(self, member_id: str) -> list[dict[str, Any]]:
         """
-        Get detailed profile information for a user.
+        Get detailed profile information for a member.
         
         Args:
-            user_id: The user's ID (from search_users results)
+            member_id: The member's ID (from search_members results)
             
         Returns:
             List of raw profile items from the API. Each item has "Name" and "Value" keys.
         """
-        endpoint = f"/.api/api.svc/users/{user_id}/viewprofile"
+        endpoint = f"/.api/api.svc/users/{member_id}/viewprofile"
         response = await self._request(
             method="GET",
             endpoint=endpoint,
@@ -354,20 +354,21 @@ class IglooClient:
         response_json = response.json()
         return response_json.get("response", {}).get("items", [])
 
-    async def get_user_name(self, user_id: str) -> dict[str, Any]:
+    async def get_member_info(self, member_id: str) -> dict[str, Any]:
         """
-        Get a user's basic info by their ID.
+        Get a member's basic info by their ID.
         
         Args:
-            user_id: The user's ID
+            member_id: The member's ID
             
         Returns:
-            Raw user response from the API containing name info.
+            Raw member response from the API containing name info.
         """
-        endpoint = f"/.api/api.svc/users/{user_id}/view"
+        endpoint = f"/.api/api.svc/users/{member_id}/view"
         response = await self._request(
             method="GET",
             endpoint=endpoint,
         )
         response_json = response.json()
         return response_json.get("response", {})
+

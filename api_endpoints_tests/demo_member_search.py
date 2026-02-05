@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Demo: User Search API Endpoints for Igloo
+Demo: Member Search API Endpoints for Igloo
 
-This script demonstrates the 3 API endpoints used by the user_search tool.
+This script demonstrates the 3 API endpoints used by the member search tools.
 It calls each endpoint directly and shows the request and response.
 
 Usage: run this command:
-    uv run python demo_user_search.py "<some employee name>" 
+    uv run python demo_member_search.py "<some employee name>" 
 
 The 3 API Endpoints Used:
-    1. GET /.api/api.svc/search/members?q={query}     - Search for users by name
+    1. GET /.api/api.svc/search/members?q={query}     - Search for members by name
     2. GET /.api/api.svc/users/{id}/viewprofile       - Get detailed profile info
-    3. GET /.api/api.svc/users/{id}/view              - Get user's name by ID (for manager lookup)
+    3. GET /.api/api.svc/users/{id}/view              - Get member's name by ID (for manager lookup)
 """
 
 import asyncio
@@ -78,18 +78,18 @@ async def authenticate(client: httpx.AsyncClient) -> bool:
 # =============================================================================
 # ENDPOINT 1: Search Members
 # =============================================================================
-# This endpoint searches for people by name (or partial name).
-# It returns basic info: name, email, username, user_id.
+# This endpoint searches for members by name (or partial name).
+# It returns basic info: name, email, username, member_id.
 #
 # Request:  GET /.api/api.svc/search/members?q={query}
 # Response: { "response": { "value": { "hit": [ { "id", "name", "email", "namespace" } ] } } }
 
-async def search_users(client: httpx.AsyncClient, query: str) -> list[dict]:
+async def search_members(client: httpx.AsyncClient, query: str) -> list[dict]:
     """
-    ENDPOINT 1: Search for people by name.
+    ENDPOINT 1: Search for members by name.
     
     Request:  GET /.api/api.svc/search/members?q={query}
-    Response: List of matching people with id, name, email, namespace (username)
+    Response: List of matching members with id, name, email, namespace (username)
     """
     print("\n" + "=" * 60)
     print("ENDPOINT 1: SEARCH MEMBERS")
@@ -111,14 +111,14 @@ async def search_users(client: httpx.AsyncClient, query: str) -> list[dict]:
     data = response.json()
     hits = data.get("response", {}).get("value", {}).get("hit", [])
     
-    print(f"Result: Found {len(hits)} person(s)")
+    print(f"Result: Found {len(hits)} member(s)")
     
     # Transform API response to clean format
     results = []
     for hit in hits:
         name_info = hit.get("name", {})
-        person = {
-            "user_id": hit.get("id", ""),
+        member = {
+            "member_id": hit.get("id", ""),
             "full_name": name_info.get("fullName", "Unknown"),
             "first_name": name_info.get("firstName", ""),
             "last_name": name_info.get("lastName", ""),
@@ -126,41 +126,41 @@ async def search_users(client: httpx.AsyncClient, query: str) -> list[dict]:
             "username": hit.get("namespace", ""),
             "profile_url": f"{COMMUNITY}/.profile/{hit.get('namespace', '')}",
         }
-        results.append(person)
+        results.append(member)
         
         # Show what we extracted from this hit
-        print(f"\n  Person {len(results)}:")
-        print(f"    user_id:   {person['user_id']}")
-        print(f"    full_name: {person['full_name']}")
-        print(f"    email:     {person['email']}")
-        print(f"    username:  {person['username']}")
+        print(f"\n  Member {len(results)}:")
+        print(f"    member_id: {member['member_id']}")
+        print(f"    full_name: {member['full_name']}")
+        print(f"    email:     {member['email']}")
+        print(f"    username:  {member['username']}")
     
     return results
 
 
 # =============================================================================
-# ENDPOINT 2: Get User Profile
+# ENDPOINT 2: Get Member Profile
 # =============================================================================
-# This endpoint returns detailed profile info for a user.
+# This endpoint returns detailed profile info for a member.
 # It includes: job title, department, manager, office, phone, start date, etc.
 #
-# Request:  GET /.api/api.svc/users/{user_id}/viewprofile
+# Request:  GET /.api/api.svc/users/{member_id}/viewprofile
 # Response: { "response": { "items": [ { "Name": "title", "Value": "Engineer" }, ... ] } }
 
-async def get_user_profile(client: httpx.AsyncClient, user_id: str) -> dict:
+async def get_member_profile(client: httpx.AsyncClient, member_id: str) -> dict:
     """
-    ENDPOINT 2: Get detailed profile for a user.
+    ENDPOINT 2: Get detailed profile for a member.
     
-    Request:  GET /.api/api.svc/users/{user_id}/viewprofile
+    Request:  GET /.api/api.svc/users/{member_id}/viewprofile
     Response: List of profile fields (title, department, office, phone, etc.)
     """
     print("\n" + "=" * 60)
-    print("ENDPOINT 2: GET USER PROFILE")
+    print("ENDPOINT 2: GET MEMBER PROFILE")
     print("=" * 60)
-    print(f"Request:  GET /.api/api.svc/users/{user_id}/viewprofile")
+    print(f"Request:  GET /.api/api.svc/users/{member_id}/viewprofile")
     
     response = await client.get(
-        f"{COMMUNITY}/.api/api.svc/users/{user_id}/viewprofile",
+        f"{COMMUNITY}/.api/api.svc/users/{member_id}/viewprofile",
         headers={"Accept": "application/json"},
     )
     
@@ -189,7 +189,7 @@ async def get_user_profile(client: httpx.AsyncClient, user_id: str) -> dict:
         "work_start_date": "start_date",
     }
     
-    # Skip these fields becuase we dont care about them
+    # Skip these fields because we dont care about them
     skip_fields = {"bluejeans", "timezone"}
     
     profile = {}
@@ -229,32 +229,32 @@ async def get_user_profile(client: httpx.AsyncClient, user_id: str) -> dict:
 
 
 # =============================================================================
-# ENDPOINT 3: Get User Name by ID
+# ENDPOINT 3: Get Member Name by ID
 # =============================================================================
-# This endpoint returns a user's name given their ID.
+# This endpoint returns a member's name given their ID.
 # We use it to look up the manager's name from their ID.
 #
-# Request:  GET /.api/api.svc/users/{user_id}/view
+# Request:  GET /.api/api.svc/users/{member_id}/view
 # Response: { "response": { "name": { "fullName": "John Smith" } } }
 
-async def get_user_name(client: httpx.AsyncClient, user_id: str) -> str | None:
+async def get_member_name(client: httpx.AsyncClient, member_id: str) -> str | None:
     """
-    ENDPOINT 3: Get user's name by their ID.
+    ENDPOINT 3: Get member's name by their ID.
     
-    Request:  GET /.api/api.svc/users/{user_id}/view
-    Response: User info including name
+    Request:  GET /.api/api.svc/users/{member_id}/view
+    Response: Member info including name
     
     We use this to look up the manager's name from their ID.
     """
     print("\n" + "=" * 60)
-    print("ENDPOINT 3: GET USER NAME BY ID")
+    print("ENDPOINT 3: GET MEMBER NAME BY ID")
     print("=" * 60)
-    print(f"Request:  GET /.api/api.svc/users/{user_id}/view")
+    print(f"Request:  GET /.api/api.svc/users/{member_id}/view")
     print(f"Purpose:  Looking up manager's name")
     
     try:
         response = await client.get(
-            f"{COMMUNITY}/.api/api.svc/users/{user_id}/view",
+            f"{COMMUNITY}/.api/api.svc/users/{member_id}/view",
             headers={"Accept": "application/json"},
         )
         
@@ -280,12 +280,12 @@ async def get_user_name(client: httpx.AsyncClient, user_id: str) -> str | None:
 
 async def main():
     if len(sys.argv) < 2:
-        print("\nUsage: uv run python demo_user_search.py \"NAME\"")
+        print("\nUsage: uv run python demo_member_search.py \"NAME\"")
         print("\nExamples:")
-        print("  uv run python demo_user_search.py \"John Smith\"")
-        print("  uv run python demo_user_search.py \"Jane\"")
-        print("\nThis script demonstrates the 3 API endpoints used by user_search:")
-        print("  1. /.api/api.svc/search/members       - Search for users")
+        print("  uv run python demo_member_search.py \"John Smith\"")
+        print("  uv run python demo_member_search.py \"Jane\"")
+        print("\nThis script demonstrates the 3 API endpoints used by member search:")
+        print("  1. /.api/api.svc/search/members       - Search for members")
         print("  2. /.api/api.svc/users/{id}/viewprofile - Get profile details")
         print("  3. /.api/api.svc/users/{id}/view      - Get name by ID")
         sys.exit(1)
@@ -293,7 +293,7 @@ async def main():
     query = sys.argv[1]
     
     print("\n" + "=" * 60)
-    print("DEMO: PEOPLE SEARCH API ENDPOINTS")
+    print("DEMO: MEMBER SEARCH API ENDPOINTS")
     print("=" * 60)
     print(f"Query: \"{query}\"")
     print(f"Community: {COMMUNITY}")
@@ -308,21 +308,21 @@ async def main():
             print("  IGLOO_MCP_USERNAME, IGLOO_MCP_PASSWORD")
             sys.exit(1)
         
-        # Endpoint 1: Search for people
-        results = await search_users(client, query)
+        # Endpoint 1: Search for members
+        results = await search_members(client, query)
         
         if not results:
-            print("\nNo people found matching the query.")
+            print("\nNo members found matching the query.")
             sys.exit(0)
         
         # Endpoint 2: Get profile for first result
-        first_person = results[0]
-        profile = await get_user_profile(client, first_person["user_id"])
+        first_member = results[0]
+        profile = await get_member_profile(client, first_member["member_id"])
         
         # Endpoint 3: Look up manager's name (if we have manager_id)
         manager_name = None
         if profile.get("_manager_id"):
-            manager_name = await get_user_name(client, profile["_manager_id"])
+            manager_name = await get_member_name(client, profile["_manager_id"])
             if manager_name:
                 profile["manager_name"] = manager_name
         
@@ -330,9 +330,9 @@ async def main():
         print("\n" + "=" * 60)
         print("FINAL RESULT")
         print("=" * 60)
-        print(f"\nPerson: {first_person['full_name']}")
-        print(f"Email:  {first_person['email']}")
-        print(f"Profile URL: {first_person['profile_url']}")
+        print(f"\nMember: {first_member['full_name']}")
+        print(f"Email:  {first_member['email']}")
+        print(f"Profile URL: {first_member['profile_url']}")
         
         if profile:
             print("\nProfile Details:")
