@@ -97,7 +97,7 @@ By default, the server uses stdio transport. For HTTP transport, set `IGLOO_MCP_
 
 ## Available Tools
 
-### search
+### search_content
 
 Search for content in the Igloo community with extensive filtering options.
 
@@ -110,7 +110,7 @@ Search for content in the Igloo community with extensive filtering options.
 - `include_archived`: Include archived content (default: false)
 
 
-### fetch
+### fetch_content
 
 Fetch one or more pages from the Igloo community and convert to Markdown for LLM consumption.
 
@@ -130,11 +130,11 @@ When content exceeds `max_length`, the response is truncated at semantic boundar
 **Example Workflow:**
 
 ```
-1. Agent: fetch(url="https://igloo.example.com/wiki/deployment")
-   Response: [content] + "CONTINUE: fetch(url="...", start_index=49801)"
+1. Agent: fetch_content(url="https://igloo.example.com/wiki/deployment")
+   Response: [content] + "CONTINUE: fetch_content(url="...", start_index=49801)"
 
-2. Agent continues: fetch(url="...", start_index=49801)
-   OR jumps to section: fetch(url="...", section="Troubleshooting")
+2. Agent continues: fetch_content(url="...", start_index=49801)
+   OR jumps to section: fetch_content(url="...", section="Troubleshooting")
 ```
 
 ## Docker

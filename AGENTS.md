@@ -7,8 +7,8 @@ This is an MCP (Model Context Protocol) server that provides AI assistants with 
 MCP is a standardized protocol that allows AI models to interact with external data sources and tools through a consistent interface.
 
 The server exposes two tools to MCP clients:
-- `search` - Search Igloo content with filters (applications, dates, parent paths)
-- `fetch` - Retrieve pages and convert HTML to Markdown for LLM consumption
+- `search_content` - Search Igloo content with filters (applications, dates, parent paths)
+- `fetch_content` - Retrieve pages and convert HTML to Markdown for LLM consumption
 
 For installation, configuration, and usage details, see [README.md](README.md).
 

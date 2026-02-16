@@ -971,8 +971,8 @@ class TestFormatTruncationMetadata:
         
         assert "⚠️ CONTENT TRUNCATED" in result
         assert "Showing 1,000 of 5,000 chars (20% of document)" in result
-        assert "To continue reading, call fetch with start_index:" in result
-        assert 'fetch(url="https://example.com/wiki/page", start_index=1000)' in result
+        assert "To continue reading, call fetch_content with start_index:" in result
+        assert 'fetch_content(url="https://example.com/wiki/page", start_index=1000)' in result
 
     def test_metadata_with_current_path(self):
         """Test formatting with current section path."""
@@ -1023,8 +1023,8 @@ class TestFormatTruncationMetadata:
         assert "Showing 49,800 of 125,000 chars (39% of document)" in result
         assert "Current section: Docs > API > Authentication" in result
         assert "Upcoming sections: Rate Limits, Error Codes, Webhooks, Examples, FAQ" in result
-        assert "To continue reading, call fetch with start_index:" in result
-        assert 'fetch(url="https://igloo.example.com/wiki/api-documentation", start_index=49800)' in result
+        assert "To continue reading, call fetch_content with start_index:" in result
+        assert 'fetch_content(url="https://igloo.example.com/wiki/api-documentation", start_index=49800)' in result
 
     def test_metadata_no_next_index(self):
         """Test formatting when next_start_index is None."""
@@ -1083,8 +1083,8 @@ class TestFormatTruncationMetadata:
         
         result = format_truncation_metadata(metadata, url)
         
-        assert "To continue reading, call fetch with start_index:" in result
-        assert '  fetch(url="https://example.com/page?query=test&filter=active", start_index=1000)' in result
+        assert "To continue reading, call fetch_content with start_index:" in result
+        assert '  fetch_content(url="https://example.com/page?query=test&filter=active", start_index=1000)' in result
 
     def test_metadata_starts_with_separator(self):
         """Test that output starts with newlines and separator."""
@@ -1118,8 +1118,8 @@ class TestFormatTruncationMetadata:
         result = format_truncation_metadata(metadata, url)
         
         # Should have continuation instructions with indented fetch command
-        assert "To continue reading, call fetch with start_index:" in result
-        assert '  fetch(url="https://example.com/page", start_index=1000)' in result
+        assert "To continue reading, call fetch_content with start_index:" in result
+        assert '  fetch_content(url="https://example.com/page", start_index=1000)' in result
         # Should NOT use table format
         assert "|" not in result
 

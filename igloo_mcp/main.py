@@ -92,8 +92,8 @@ async def health_check(request: Request) -> JSONResponse:
     return JSONResponse({"status": "healthy"})
 
 
-@mcp.tool(name="search")
-async def search_tool(
+@mcp.tool(name="search_content")
+async def search_content_tool(
     ctx: Context[ServerSession, AppContext],
     query: str | None = None,
     applications: list[
@@ -240,8 +240,8 @@ async def search_tool(
     )
 
 
-@mcp.tool(name="fetch")
-async def fetch_tool(
+@mcp.tool(name="fetch_content")
+async def fetch_content_tool(
     ctx: Context[ServerSession, AppContext],
     url: str | list[str],
     max_length: int | None = None,
@@ -284,7 +284,7 @@ async def fetch_tool(
     Notes:
         - Only URLs from the configured community are allowed
         - Navigation, scripts, ads, and other non-content elements are removed
-        - Use this tool to get the full content of pages found via search
+        - Use this tool to get the full content of pages found via search_content
         - Multiple URLs are fetched concurrently for efficiency
         - Maximum number of URLs per request is limited by fetch_max_pages config
         - For large documents, follow CONTINUE instructions to read remaining content

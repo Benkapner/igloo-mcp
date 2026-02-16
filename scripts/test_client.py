@@ -7,7 +7,7 @@ from mcp.client.streamable_http import streamablehttp_client
 
 async def main():
     """
-    An example client to connect to the Igloo MCP server and test the search and fetch tools.
+    An example client to connect to the Igloo MCP server and test the search_content and fetch_content tools.
     """
     async with streamablehttp_client("http://localhost:8000/mcp") as (
         read_stream,
@@ -26,14 +26,14 @@ async def main():
             }
 
             print(f"\n{'='*60}")
-            print("STEP 1: SEARCH")
+            print("STEP 1: SEARCH CONTENT")
             print(f"{'='*60}")
-            print(f"Calling the 'search' tool with arguments: {search_tool_args}")
-            
-            result = await session.call_tool("search", search_tool_args)
-            
+            print(f"Calling the 'search_content' tool with arguments: {search_tool_args}")
+
+            result = await session.call_tool("search_content", search_tool_args)
+
             if result.isError:
-                print(f"Error calling search tool: {result}")
+                print(f"Error calling search_content tool: {result}")
                 return
             
             if not result.content or len(result.content) == 0:
@@ -61,24 +61,24 @@ async def main():
             urls_to_fetch = urls[:3]
             
             print(f"\n{'='*60}")
-            print("STEP 2: FETCH")
+            print("STEP 2: FETCH CONTENT")
             print(f"{'='*60}")
             print(f"Found {len(urls)} URLs in search results.")
             print(f"Fetching the first {len(urls_to_fetch)} pages...")
             for i, url in enumerate(urls_to_fetch, 1):
                 print(f"  {i}. {url}")
 
-            # Step 3: Fetch the pages using the fetch tool
+            # Step 3: Fetch the pages using the fetch_content tool
             fetch_tool_args = {
                 "url": urls_to_fetch,  # Can be single URL or list of URLs
             }
 
-            print(f"\nCalling the 'fetch' tool with {len(urls_to_fetch)} URL(s)...")
-            
-            fetch_result = await session.call_tool("fetch", fetch_tool_args)
-            
+            print(f"\nCalling the 'fetch_content' tool with {len(urls_to_fetch)} URL(s)...")
+
+            fetch_result = await session.call_tool("fetch_content", fetch_tool_args)
+
             if fetch_result.isError:
-                print(f"Error calling fetch tool: {fetch_result}")
+                print(f"Error calling fetch_content tool: {fetch_result}")
                 return
             
             if fetch_result.content and len(fetch_result.content) > 0:

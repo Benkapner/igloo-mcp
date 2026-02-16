@@ -261,8 +261,8 @@ def format_truncation_metadata(metadata: "TruncationMetadata", url: str) -> str:
     if metadata.next_start_index is not None:
         lines.extend([
             "",
-            "To continue reading, call fetch with start_index:",
-            f'  fetch(url="{url}", start_index={metadata.next_start_index})',
+            "To continue reading, call fetch_content with start_index:",
+            f'  fetch_content(url="{url}", start_index={metadata.next_start_index})',
         ])
     
     return "\n".join(lines)
