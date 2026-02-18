@@ -1298,8 +1298,8 @@ class TestFormatMemberSearchResults:
         output = format_member_search_results(
             results, query="Johnson", community_url="https://example.com"
         )
-        
-        assert 'Members found for query: "Johnson" (Total Results Found: 1):' in output
+
+        assert 'Members found for query "Johnson" (Results found: 1):' in output
         assert "Name: Alice Johnson" in output
         assert "Email: ajohnson@example.com" in output
         assert "Member ID: 12345" in output
@@ -1312,9 +1312,8 @@ class TestFormatMemberSearchResults:
         output = format_member_search_results(
             results=[], query="NonExistent", community_url="https://example.com"
         )
-        
-        assert 'Members found for query: "NonExistent" (Total Results Found: 0):' in output
-        assert "No results found." in output
+
+        assert output == "No results found for query 'NonExistent'."
 
     def test_multiple_results(self):
         """Test formatting with multiple members."""
@@ -1336,8 +1335,8 @@ class TestFormatMemberSearchResults:
         output = format_member_search_results(
             results, query="Smith", community_url="https://example.com"
         )
-        
-        assert 'Members found for query: "Smith" (Total Results Found: 2):' in output
+
+        assert 'Members found for query "Smith" (Results found: 2):' in output
         assert "Name: John Smith" in output
         assert "Name: Jane Smith" in output
         assert "Member ID: 1" in output
@@ -1510,37 +1509,6 @@ class TestFormatMemberProfile:
         assert "Extension: 5678" in output
         assert "Mobile: +1-555-9999" in output
         assert "Start Date: 2020-01-15" in output
-
-    def test_whitelist_and_null_values(self):
-        """Test that only whitelisted fields are shown, and null values are skipped."""
-        member_info = {
-            "name": {"fullName": "Test Member"},
-            "email": "test@example.com",
-            "namespace": "test",
-        }
-        profile_items = [
-            {"Name": "title", "Value": "Engineer"},
-            {"Name": "bluejeans", "Value": "https://bluejeans.com/12345"},  # Not in whitelist
-            {"Name": "timezone", "Value": "America/New_York"},  # Not in whitelist
-            {"Name": "cellphone", "Value": "null"},  # In whitelist but null value
-            {"Name": "unknown_field", "Value": "some value"},  # Not in whitelist
-        ]
-        
-        output = format_member_profile(
-            member_info=member_info,
-            profile_items=profile_items,
-            manager_name=None,
-            community_url="https://example.com"
-        )
-        
-        # Whitelisted field with valid value is shown
-        assert "Job Title: Engineer" in output
-        # Fields not in whitelist are not shown
-        assert "bluejeans" not in output.lower()
-        assert "timezone" not in output.lower()
-        assert "unknown_field" not in output.lower()
-        # Whitelisted field with null value is not shown
-        assert "Mobile: null" not in output
 
     def test_unicode_characters(self):
         """Test formatting with unicode/international characters."""

@@ -276,29 +276,27 @@ def format_member_search_results(
     """
     Format member search results for LLM consumption.
     Returns basic info only (no profile details). Use format_member_profile for details.
-    
+
     Args:
         results: List of raw member records from the API
         query: The original search query
         community_url: The base URL of the Igloo community (for building profile URLs)
-    
+
     Returns:
         A formatted string containing the member search results with basic info.
     """
-    header = f'Members found for query: "{query}" (Total Results Found: {len(results)}):'
-    
     if not results:
-        return f"{header}\n\nNo results found."
-    
-    formatted_results = [header]
-    
+        return f"No results found for query '{query}'."
+
+    output = f'Members found for query "{query}" (Results found: {len(results)}):'
+
     for member in results:
-        formatted_results.append("\n----------\n")
-        formatted_results.append(_format_member_basic_info(member, community_url))
-    
-    formatted_results.append("\n----------")
-    
-    return "".join(formatted_results)
+        output += "\n----------\n"
+        output += _format_member_basic_info(member, community_url)
+
+    output += "\n----------"
+
+    return output
 
 
 def _format_member_basic_info(member: dict[str, Any], community_url: str = "") -> str:
@@ -382,7 +380,7 @@ def format_member_profile(
         field_value = item.get("Value", "")
         
         # Skip empty or null values
-        if not field_value or field_value in ("null", "https://bluejeans.com/null"):
+        if not field_value or field_value == "null":
             continue
         
         # Get display label from whitelist

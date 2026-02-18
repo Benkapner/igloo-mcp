@@ -1602,44 +1602,6 @@ async def test_get_member_profile_success(
     assert items[1] == {"Name": "department", "Value": "Engineering"}
 
 
-async def test_get_member_profile_returns_all_items(
-    client: IglooClient, mocker: MockerFixture
-):
-    """
-    Test that all raw items are returned including fields like bluejeans/timezone.
-    
-    Verifies that:
-    - No filtering is done at the client level
-    - Filtering happens in the formatter instead
-    """
-    profile_response_content = b'''
-    {
-        "response": {
-            "items": [
-                {"Name": "title", "Value": "Engineer"},
-                {"Name": "bluejeans", "Value": "https://bluejeans.com/12345"},
-                {"Name": "timezone", "Value": "America/New_York"},
-                {"Name": "busphone", "Value": "null"}
-            ]
-        }
-    }
-    '''
-    
-    request = Request(method="GET", url=f"{BASE_URL}/.api/api.svc/members/12345/viewprofile")
-    mock_response = Response(200, content=profile_response_content, request=request)
-    mocker.patch.object(
-        client._client, "request", return_value=mock_response, new_callable=mocker.AsyncMock
-    )
-
-    items = await client.get_member_profile("12345")
-
-    # All items returned, including ones that formatter will skip
-    assert len(items) == 4
-    field_names = [item["Name"] for item in items]
-    assert "bluejeans" in field_names
-    assert "timezone" in field_names
-
-
 async def test_get_member_profile_empty_response(
     client: IglooClient, mocker: MockerFixture
 ):

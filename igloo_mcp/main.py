@@ -467,7 +467,6 @@ async def search_members_tool(
     
     Use this tool when:
     - Looking for someone by name ("Find John Smith")
-    - Need to identify which member to get more info about
     
     Args:
         query: Name or partial name to search for (e.g., "John Smith", "Jane")
@@ -498,11 +497,8 @@ async def fetch_members_tool(
 ) -> str:
     """
     Get detailed profile for one or more members by their ID(s).
-    Use search_members first to find member IDs.
     
-    Use this tool when:
-    - Need detailed info about specific members (job title, manager, phone, office)
-    - Already have member_id(s) from search_members results
+    Retrieves comprehensive member information including job title, manager, contact details, and office location. Use search_members first to find member IDs.
     
     Args:
         member_id: A single member ID or list of member IDs (from search_members results)
