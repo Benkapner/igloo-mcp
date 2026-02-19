@@ -461,20 +461,14 @@ async def search_members_tool(
     query: str,
     limit: int = 10,
 ) -> str:
-    """
-    Search for members in the Igloo community by name.
-    Returns basic info only (name, email, member ID). Use fetch_members to get detailed profile.
-    
-    Use this tool when:
-    - Looking for someone by name ("Find John Smith")
+    Search for members in the Igloo community.
     
     Args:
-        query: Name or partial name to search for (e.g., "John Smith", "Jane")
+        query: Name or partial name of a member to search for (e.g., "John Smith", "Jane")
         limit: Maximum number of members to return (default: 10)
     
     Returns:
-        List of matching members with basic info and their member IDs.
-        Use the member_id with fetch_members to get detailed profile.
+        A list of results matching the query, containing name, email, member ID fields for each result.
     """
     logger.info(f"Processing search_members request for query: {query}")
     
