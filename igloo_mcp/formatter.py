@@ -288,7 +288,7 @@ def format_member_search_results(
     if not results:
         return f"No results found for query '{query}'."
 
-    output = f'Members found for query "{query}" (Results found: {len(results)}):'
+    output = f'Member Search Results for "{query}" ({len(results)} found):'
 
     for member in results:
         output += "\n----------\n"
@@ -335,6 +335,45 @@ PROFILE_FIELD_MAPPING = {
     "cellphone": "Mobile",
     "work_start_date": "Start Date",
 }
+
+
+def format_member_profiles(
+    results: list[dict[str, str]],
+    total_count: int,
+) -> str:
+    """
+    Format multiple member profile results for LLM consumption.
+
+    Each member is formatted with a clear header showing its position,
+    with separators between members for easy reading.
+
+    Args:
+        results: List of dictionaries with 'member_id', 'profile' (content), and optionally 'error'.
+        total_count: Total number of members being fetched (for display in headers).
+
+    Returns:
+        Formatted string with all member profiles concatenated with clear separators.
+    """
+    if not results:
+        return "No member profiles to display."
+
+    formatted_parts = []
+
+    for i, result in enumerate(results, start=1):
+        member_id = result.get("member_id", "Unknown")
+        profile = result.get("profile", "")
+        error = result.get("error")
+
+        header = f"===== MEMBER {i} of {total_count} =====\n"
+
+        if error:
+            content = f"Member ID: {member_id}\n[Error: {error}]\n"
+        else:
+            content = f"{profile}\n"
+
+        formatted_parts.append(header + content)
+
+    return "\n".join(formatted_parts)
 
 
 def format_member_profile(

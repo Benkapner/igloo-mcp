@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date
@@ -23,6 +24,7 @@ from igloo_mcp.formatter import (
     format_truncation_metadata,
     format_member_search_results,
     format_member_profile,
+    format_member_profiles,
 )
 from igloo_mcp.igloo import ApplicationType, IglooClient, UpdatedDateType
 from igloo_mcp.logger import logger, configure_logger
@@ -284,7 +286,6 @@ async def fetch_content_tool(
     Notes:
         - Only URLs from the configured community are allowed
         - Navigation, scripts, ads, and other non-content elements are removed
-        - Use this tool to get the full content of pages found via search_content
         - Multiple URLs are fetched concurrently for efficiency
         - Maximum number of URLs per request is limited by fetch_max_pages config
         - For large documents, follow CONTINUE instructions to read remaining content
@@ -461,22 +462,29 @@ async def search_members_tool(
     query: str,
     limit: int = 10,
 ) -> str:
-    Search for members in the Igloo community.
-    
-    Args:
-        query: Name or partial name of a member to search for (e.g., "John Smith", "Jane")
-        limit: Maximum number of members to return (default: 10)
-    
-    Returns:
-        A list of results matching the query, containing name, email, member ID fields for each result.
     """
-    logger.info(f"Processing search_members request for query: {query}")
-    
+    Search for members in the Igloo community by name.
+
+    Args:
+        query (str): Name or partial name to search for. Case-insensitive.
+            Example: "John Smith", "Jane", "Smith"
+        limit (int, optional): Maximum number of members to return (1-100). Default: 10.
+
+    Returns:
+        str: Formatted list of matching members with name, email, and member_id.
+    """
+    if not query.strip():
+        return "Error: Query cannot be empty. Provide a name or partial name to search for."
+
     client = ctx.request_context.lifespan_context.igloo_client
-    
-    # Search for members (returns raw API data)
-    raw_results = await client.search_members(query=query, limit=limit)
-    
+
+    try:
+        raw_results = await client.search_members(query=query, limit=limit)
+    except httpx.HTTPStatusError as e:
+        return f"Error: HTTP {e.response.status_code} - Failed to search members"
+    except httpx.TimeoutException:
+        return "Error: Request timed out while searching members"
+
     return format_member_search_results(
         results=raw_results,
         query=query,
@@ -487,64 +495,82 @@ async def search_members_tool(
 @mcp.tool(name="fetch_members")
 async def fetch_members_tool(
     ctx: Context[ServerSession, AppContext],
-    Fetch detailed information of one or more members in the Igloo community.
+    members_ids: list[str],
+) -> str:
+    """
+    Fetch detailed profile information for one or more members by their ID.
 
     Args:
-        member_id: Either a single member ID or a list of member IDs to retrieve information about.
-    
+        members_ids (list[str]): A list of member IDs to fetch profiles for.
+
     Returns:
-        Detailed information about the user(s), including information such as title, manager, contact details, and office location.
+        str: Detailed member profile(s), containing information such as:
+         Full name, email, username, Job title and department, Manager name, Contact info (phone, mobile), and office location.
+         For multiple IDs, each profile is clearly separated with headers.
     """
     client = ctx.request_context.lifespan_context.igloo_client
-    
-    # Handle single member_id
-    if isinstance(member_id, str):
-        logger.info(f"Processing fetch_members request for member_id: {member_id}")
-        return await _fetch_single_member(client, member_id)
-    
-    # Handle list of member_ids
-    member_ids = member_id
-    logger.info(f"Processing fetch_members request for {len(member_ids)} members")
-    
-    if len(member_ids) == 0:
+
+    if len(members_ids) == 0:
         return "Error: No member IDs provided."
-    
-    results = []
-    for i, mid in enumerate(member_ids, start=1):
-        try:
-            profile = await _fetch_single_member(client, mid)
-            results.append(f"===== MEMBER {i} of {len(member_ids)} =====\n{profile}")
-        except Exception as e:
-            results.append(f"===== MEMBER {i} of {len(member_ids)} =====\nError fetching member {mid}: {e}")
-    
-    return "\n\n".join(results)
+
+    tasks = [_fetch_single_member(client, mid) for mid in members_ids]
+    results = await asyncio.gather(*tasks)
+
+    formatted_results = []
+    for mid, result in zip(members_ids, results):
+        formatted_results.append(
+            {
+                "member_id": mid,
+                "profile": result.get("profile"),
+                "error": result.get("error"),
+            }
+        )
+
+    return format_member_profiles(
+        results=formatted_results,
+        total_count=len(members_ids),
+    )
 
 
-async def _fetch_single_member(client, member_id: str) -> str:
-    """Helper to fetch a single member's profile."""
-    # Get member basic info
-    member_info = await client.get_member_info(member_id)
-    
-    # Get profile items
-    profile_items = await client.get_member_profile(member_id)
-    
-    # Get manager name if available
+async def _fetch_single_member(
+    client: IglooClient,
+    member_id: str,
+) -> dict[str, str]:
+    """
+    Fetch a single member's profile.
+
+    Returns dict with either 'profile' key (success) or 'error' key (failure).
+    """
+    try:
+        member_info, profile_items = await asyncio.gather(
+            client.get_member_info(member_id),
+            client.get_member_profile(member_id),
+        )
+    except httpx.HTTPStatusError as e:
+        return {
+            "error": f"HTTP {e.response.status_code} - Failed to fetch member '{member_id}'"
+        }
+    except httpx.TimeoutException:
+        return {"error": f"Request timed out while fetching member '{member_id}'"}
+
     manager_name = None
     for item in profile_items:
         if item.get("Name") == "i_report_to" and item.get("Value"):
             try:
                 manager_response = await client.get_member_info(item["Value"])
                 manager_name = manager_response.get("name", {}).get("fullName")
-            except Exception:
-                pass
+            except (httpx.HTTPStatusError, httpx.TimeoutException):
+                logger.warning(f"Failed to fetch manager info for member '{member_id}' with manager ID '{item['Value']}'")
             break
     
-    return format_member_profile(
-        member_info=member_info,
-        profile_items=profile_items,
-        manager_name=manager_name,
-        community_url=client.community,
-    )
+    return {
+        "profile": format_member_profile(
+            member_info=member_info,
+            profile_items=profile_items,
+            manager_name=manager_name,
+            community_url=client.community,
+        )
+    }
 
 
 def main():

@@ -162,7 +162,7 @@ Search for members in the Igloo community by name. Returns basic information onl
 Get detailed profile information for one or more members by their ID(s).
 
 **Parameters:**
-- `member_id`: A single member ID string or a list of member IDs (obtained from `search_members` results)
+- `members_ids`: A list of member IDs (obtained from `search_members` results)
 
 **Returns:**
 - Detailed member profile(s) including:
@@ -178,10 +178,10 @@ Get detailed profile information for one or more members by their ID(s).
 1. Agent: search_members(query="John Smith")
    Response: [list of matching members with their member_ids]
 
-2. Agent: fetch_members(member_id="12345-abcd-...")
+2. Agent: fetch_members(members_ids=["12345-abcd-..."])
    Response: [detailed profile for John Smith]
 
-3. Agent: fetch_members(member_id=["12345-abcd-...", "67890-efgh-..."])
+3. Agent: fetch_members(members_ids=["12345-abcd-...", "67890-efgh-..."])
    Response: [detailed profiles for multiple members]
 ```
 

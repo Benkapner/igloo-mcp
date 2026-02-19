@@ -1299,7 +1299,7 @@ class TestFormatMemberSearchResults:
             results, query="Johnson", community_url="https://example.com"
         )
 
-        assert 'Members found for query "Johnson" (Results found: 1):' in output
+        assert 'Member Search Results for "Johnson" (1 found):' in output
         assert "Name: Alice Johnson" in output
         assert "Email: ajohnson@example.com" in output
         assert "Member ID: 12345" in output
@@ -1336,7 +1336,7 @@ class TestFormatMemberSearchResults:
             results, query="Smith", community_url="https://example.com"
         )
 
-        assert 'Members found for query "Smith" (Results found: 2):' in output
+        assert 'Member Search Results for "Smith" (2 found):' in output
         assert "Name: John Smith" in output
         assert "Name: Jane Smith" in output
         assert "Member ID: 1" in output
