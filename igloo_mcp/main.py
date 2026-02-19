@@ -493,20 +493,13 @@ async def search_members_tool(
 @mcp.tool(name="fetch_members")
 async def fetch_members_tool(
     ctx: Context[ServerSession, AppContext],
-    member_id: str | list[str],
-) -> str:
-    """
-    Get detailed profile for one or more members by their ID(s).
-    
-    Retrieves comprehensive member information including job title, manager, contact details, and office location. Use search_members first to find member IDs.
-    
+    Fetch detailed information of one or more members in the Igloo community.
+
     Args:
-        member_id: A single member ID or list of member IDs (from search_members results)
-            Example single: "12345-abcd-..."
-            Example multiple: ["12345-abcd-...", "67890-efgh-..."]
+        member_id: Either a single member ID or a list of member IDs to retrieve information about.
     
     Returns:
-        Detailed member profile(s) including job title, manager, contact info, etc.
+        Detailed information about the user(s), including information such as title, manager, contact details, and office location.
     """
     client = ctx.request_context.lifespan_context.igloo_client
     
